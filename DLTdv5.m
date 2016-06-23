@@ -129,7 +129,7 @@ end
 % switchyard to handle updating & processing tasks for the figure
 switch call
   
-  %% case 99 - GUI figure creation and initialization
+  %% case 99 - GUI figure creation
   case {99} % Initialize the GUI
     
     fprintf('\n')
@@ -690,7 +690,7 @@ switch call
     
     %% case 1 - refresh video frames
   case {1} % refresh the video frames
-    
+    uda.drawVid
     currframe=getappdata(h(1),'currframe');
     colorVal=get(h(12),'Value'); % get color mode info
     % generate a new, gamma-scaled colormap if in grayscale mode
@@ -2307,6 +2307,7 @@ spReturn=sp; % original selected point
 atMode=get(h(35),'Value'); % auto-track mode: 1=off, 2=advance,
 % 3=semi, 4=auto, 5=multi
 trackFailed=false; % tracking loop pass / fail marker
+oData.movs=cell(1,uda.nvid); % populate oData movs array to store autotrack image data
 
 % make sure we're not already at the end of the sequence
 if fr==frmax, return, end
