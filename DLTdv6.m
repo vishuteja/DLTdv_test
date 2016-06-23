@@ -139,7 +139,7 @@ switch call
   case {99} % Initialize the GUI
     
     fprintf('\n')
-    disp('DLTdv6 (updated April 15, 2016)')
+    disp('DLTdv6 (updated June 23, 2016)')
     fprintf('\n')
     disp('Visit http://www.unc.edu/~thedrick/ for more information,')
     disp('tutorials, sample data & updates to this program.')
@@ -676,7 +676,7 @@ switch call
     
     % turn on Centroid finding & set value to "On" if the image analysis
     % toolbox functions that it depends on are available
-    if exist('im2bw','file')==(2) || exist('im2bw','file')==6
+    if exist('im2bw')~=0 || exist('im2bw')~=0
       set(h(55),'enable','on','Value',0);
       disp('Detected Image Analysis toolbox, centroid localization is')
       disp('available, enable it via the checkbox in the Controls window.')

@@ -28,10 +28,11 @@ function [] = DLTdv5(varargin)
 
 % 2014-10-16 - updated for compatibility with r2014b new graphics
 % environment, checked for backward compatibility with r2013a and r2008b
+% 2015-04-15 - fix problems relating to mp4 timebase
 
 %% Function initialization
 if nargin==0 % no inputs, just fix the path and run the gui
-
+  
   % check Matlab version and don't start if not >= 7.  Many of the figure
   % and gui controls changed in the 6.5 --> 7.0 jump and it is no longer
   % possible to support the older versions.
@@ -53,14 +54,14 @@ if nargin==0 % no inputs, just fix the path and run the gui
     disp('and VideoReader. Use DLTdv4 if you have an older MATLAB version')
     disp('that has the aviread function.')
   end
-    
+  
   % check to make sure we were called with the appropriate name
   if strcmpi(mfilename,'DLTdv5')==0
     beep
     disp('Error: This program must be named "DLTdv5.m" to function properly.')
     return
   end
-
+  
   % check to see if we are in the path, add us if we are not
   dltloc=which('DLTdv5');
   if ispc, p1=lower(path); else p1=path; end % current path
@@ -75,7 +76,7 @@ if nargin==0 % no inputs, just fix the path and run the gui
   end
   idx2(1)=0;
   idx2(2:numel(idx)+1)=idx;
-
+  
   % loop through the path and see if dltloc matches it
   for i=1:numel(idx2)-1
     pstring=p1(idx2(i)+1:idx2(i+1)-1); % path segment
@@ -92,7 +93,7 @@ if nargin==0 % no inputs, just fix the path and run the gui
     fprintf('Adding %s to the MATLAB search path \n',dlttrim)
   end
   call=99; % go creat the GUI if we didn't get any input arguments
-
+  
 elseif nargin==1 % assume a switchyard call but no data
   call=varargin{1};
   try
@@ -107,13 +108,13 @@ elseif nargin==1 % assume a switchyard call but no data
     h=uda.handles; % get complete handles
   end
   sp=get(h(32),'Value'); % get the selected point
-
+  
 elseif nargin==2 % assume a switchyard call and data
   call=varargin{1};
   uda=varargin{2};
   h=uda.handles; % get complete handles
   sp=get(h(32),'Value'); % get the selected point
-
+  
 elseif nargin==3 % switchyard call, data & subfunction specific data
   call=varargin{1};
   uda=varargin{2};
@@ -127,21 +128,21 @@ end
 
 % switchyard to handle updating & processing tasks for the figure
 switch call
-
-%% case 99 - GUI figure creation
+  
+  %% case 99 - GUI figure creation and initialization
   case {99} % Initialize the GUI
-
+    
     fprintf('\n')
-    disp('DLTdv5 (updated October 16, 2014)')
+    disp('DLTdv5 (updated June 23, 2016)')
     fprintf('\n')
     disp('Visit http://www.unc.edu/~thedrick/ for more information,')
     disp('tutorials, sample data & updates to this program.')
     fprintf('\n')
-
+    
     % layout parameters for controls window
     top=40.23;
     width=58;
-
+    
     h(1) = figure('Units','characters',... % control figure
       'Color',[0.831 0.815 0.784]','Doublebuffer','on', ...
       'IntegerHandle','off','MenuBar','none',...
@@ -150,153 +151,153 @@ switch call
       'HandleVisibility','callback','Tag','figure1',...
       'Userdata',[],'Visible','on','deletefcn','DLTdv5(13)',...
       'interruptible','on');
-
+    
     h(29) = uicontrol('Parent',h(1),'Units','characters',... % Video frame
       'Position',[3 26.2 51.5 8.0],'Style','frame','BackgroundColor',...
       [0.568 0.784 1],'string','Points and auto-tracking');
-
+    
     h(30) = uicontrol('Parent',h(1),... % Points frame part 1
       'Units','characters','Position',[3 top-28.73 51.5 14.3],'Style',...
       'frame','BackgroundColor',[0.788 1 0.576],'string',...
       'Points and auto-tracking');
-
+    
     uicontrol('Parent',h(1),'Units','characters',... % Points frame part 2
       'Position',[3 top-39.23 31.5 12.5],'Style','frame',...
       'BackgroundColor',[0.788 1 0.576],'string',...
       'Points and auto-tracking');
-
+    
     uicontrol('Parent',h(1),... % blank string
       'Units','characters','Position',[3.1 top-28.68 32.3 4.6],'Style',...
       'text','BackgroundColor',[0.788 1 0.576],'string','');
-
+    
     uicontrol('Parent',h(1),'Units','characters',... % Points frame part 3
       'Position',[23 top-39.23 31.5 2.8],'Style','frame',...
       'BackgroundColor',[0.788 1 0.576],'string','bottom right');
-
+    
     uicontrol('Parent',h(1),... % blank string
       'Units','characters','Position',[3.1 top-39.15 31.3 4.6],'Style',...
       'text','BackgroundColor',[0.788 1 0.576],'string','');
-
+    
     h(5) = uicontrol('Parent',h(1),'Units','characters',... % frame slider
       'Position',[7.2 top-13.23 44.2 1.2],'String',{  'frame' },...
       'Style','slider','Tag','slider2','Callback',...
       'DLTdv5(1)','Enable','off');
-
+    
     h(6) = uicontrol('Parent',h(1),... % initialize button
       'Units','characters','Position',[2.2 top-4.43 14 3],'String',...
       'Initialize','Callback','DLTdv5(0)','ToolTipString', ...
       'Load the videos and DLT specification','Tag','pushbutton1');
-
+    
     h(7) = uicontrol('Parent',h(1),... % Save data button
       'Units','characters','Position',[21 top-2.73 14.4 1.8],'String',...
       'Save Data','Tag','pushbutton3',...
       'Callback','DLTdv5(5)','Enable','off');
-
+    
     % h(8) - frame number text box (see below)
-
+    
     % h(10) - unused
-
+    
     % h(11) - unused
-
+    
     % h(12) - color control check box, see below
-
+    
     h(18) = uicontrol('Parent',h(1),... % gamma control label
       'Units','characters','BackgroundColor',[0.568 0.784 1],...
       'HorizontalAlignment','left','Position',[7 top-8.03 20.4 1.3],...
       'String','Video gamma','Style','text','Tag','text1');
-
+    
     uicontrol('Parent',h(1),... % color video control label
       'Units','characters','BackgroundColor',[0.568 0.784 1],...
       'HorizontalAlignment','left','Position',[37 top-8.03 17.0 1.3],...
       'String','Display in color','Style','text','Tag','text1');
-
+    
     h(12)=uicontrol('Parent',h(1),... % Color display checkbox
       'Units','characters','BackgroundColor',[0.568 0.784 1],...
       'Position',[43 top-9.23 4 1],'Value',0,'Style','checkbox','Tag',...
       'colorVideos','enable','off','Callback','DLTdv5(15)');
-
+    
     h(13) = uicontrol('Parent',h(1),... % video gamma slider
       'Units','characters','Position',[7 top-9.23 28 1.3],'String',...
       {  'gamma' },'Style','slider','Tag','slider1','Min',.1','Max',...
       2,'Value',1,'Callback','DLTdv5(1)', ...
       'Enable','off', 'ToolTipString','Video Gamma slider');
-
+    
     h(14) = uicontrol('Parent',h(1),'Units','characters',... % quit button
       'Position',[39.8 top-4.43 15.2 3],'String','Quit',...
       'Tag','pushbutton4','Callback','DLTdv5(11)','enable','on');
-
+    
     % h(15-17) - unused
-
+    
     % h(18) - Gamma control label, see above
-
+    
     % h(19) - see below (add point button)
-
+    
     % h(20) - unused
-
+    
     uicontrol('Parent',h(1),... % frame slider label
       'Units','characters','BackgroundColor',[0.568 0.784 1],...
       'HorizontalAlignment','left','Position',[7 top-11.73 26.6 1.1],...
       'String','Frame number:','Style','text','Tag','text6');
-
+    
     h(21) = uicontrol('Parent',h(1),... % frame slider label
       'Units','characters','BackgroundColor',[0.568 0.784 1],...
       'HorizontalAlignment','left','Position',[35 top-11.73 6.6 1.1],...
       'String','/NaN','Style','text','Tag','text6');
-
+    
     h(8) = uicontrol('Parent',h(1),... % frame text box
       'Units','characters','BackgroundColor',[1 1 1],'Position',...
       [24 top-11.73 10 1.5],'String','0','Style','edit','Tag','edit3',...
       'Callback','DLTdv5(7)','enable','off');
-
+    
     h(22) = uicontrol('Parent',h(1),... % load previous data button
       'Units','characters','Position',[21 top-5.23 14.4 1.7],'String',...
       'Load Data','Tag','pushbutton5','enable','off','Callback',...
       'DLTdv5(6)');
-
+    
     h(23) = uicontrol('Parent',h(1),... % Autotrack search width label
       'Units','characters','BackgroundColor',[0.788 1 0.576],...
       'HorizontalAlignment','left','Position',[7 top-24.03 26.6 1.3],...
       'String','Autotrack search area size','Style','text',...
       'Tag','text15');
-
+    
     h(25) = uicontrol('Parent',h(1),... % Autotrack threshold label
       'Units','characters','BackgroundColor',[0.788 1 0.576],...
       'HorizontalAlignment','left','Position',[7 top-27.13 26.6 1.3],...
       'String','Autotrack threshold','Style','text',...
       'Tag','text16');
-
+    
     h(27) = uicontrol('Parent',h(1),... % Autotrack fit
       'Units','characters','BackgroundColor',[0.788 1 0.576],...
       'HorizontalAlignment','left','Position',[7 top-25.23 26.6 1.3],...
       'String','Autotrack fit: --','Style','text','Tag','text17');
-
+    
     h(31) = uicontrol('Parent',h(1),... % Current point label
       'Units','characters','BackgroundColor',[0.788 1 0.576],...
       'HorizontalAlignment','left','Position',[7 top-17.23 14.2 1.3],...
       'String','Current point','Style','text','Tag','text13');
-
+    
     h(32) = uicontrol(... % Current point pull-down menu
       'Parent',h(1),'Units','characters','Position',...
       [21.6 top-17.33 10 1.6],'String',' 1','Style','popupmenu',...
       'Value',1,'Tag','popupmenu1','Enable','off','Callback',...
       'DLTdv5(1)');
-
+    
     h(19) = uicontrol('Parent',h(1),... % add-a-point button
       'Units','characters','Position',[33.2 top-17.33 16 1.6],'String',...
       'Add a point','Callback','DLTdv5(12)','ToolTipString', ...
       'Add a point to the pull down menu','Tag','pushbutton1', ...
       'enable','off');
-
+    
     h(33) = uicontrol('Parent',h(1),... % DLT residual
       'Units','characters','BackgroundColor',[0.788 1 0.576],...
       'HorizontalAlignment','left','Position',[7 top-29.0 26.6 1.3],...
       'String','DLT residual: --','Style','text','Tag','text18');
-
+    
     h(34) = uicontrol('Parent',h(1), ... % Autotrack mode label
       'Units','characters','Position',[7 top-19.63 24.2 1.3],...
       'BackgroundColor',[0.788 1 0.576],'HorizontalAlignment','left',...
       'Style','text','String','Autotrack mode');
-
+    
     h(35) = uicontrol(... % Current point pull-down menu
       'Parent',h(1),'Units','characters','Position',...
       [24 top-19.48 20 1.6],'String',...
@@ -304,23 +305,23 @@ switch call
       'Style','popupmenu',...
       'Value',1,'Tag','popupmenu1','Enable','off','Callback',...
       'DLTdv5(1)');
-
+    
     %h(36) & h(37) are unused
-
+    
     h(38) = uicontrol('Parent',h(1),... % Autotrack search area size
       'Units','characters','BackgroundColor',[1 1 1],'Position',...
       [36.8 top-24.13 9.8 1.6],'String','9','Style','edit','Tag',...
       'edit7','Callback','DLTdv5(9)','enable','off');
-
+    
     h(39) = uicontrol('Parent',h(1),... % Autotrack threshold
       'Units','characters','BackgroundColor',[1 1 1],'Position', ...
       [36.8 top-26.93 9.8 1.6],'String','9','Style','edit','Tag', ...
       'edit8','Callback','DLTdv5(10)','enable','off');
-
+    
     % h(40) - h(43) unused
-
+    
     % h(50) - unused
-
+    
     h(51)=axes('Position',... % create autotrack image axis
       [.63 .11 .30 .165],'XTickLabel','', ...
       'YTickLabel','','Visible','on','Parent',h(1),'box','off');
@@ -330,83 +331,83 @@ switch call
     colormap(h(51),c)
     xlim(h(51),[1 21]);
     ylim(h(51),[1 21]);
-
+    
     h(52)=uicontrol('Parent',h(1), ... % DLT visual feedback label
       'Units','characters','Position',[7 top-34.63 24.2 1.3],...
       'BackgroundColor',[0.788 1 0.576],'HorizontalAlignment','left',...
       'Style','text','String','DLT visual feedback');
-
+    
     h(53)=uicontrol('Parent',h(1),... % DLT visual feedback checkbox
       'Units','characters','BackgroundColor',[0.788 1 0.576],...
       'Position',[29 top-34.33 4 1],'Value',1,'Style','checkbox','Tag',...
       'DLTfeedbackbox','enable','off','Callback','DLTdv5(1)');
-
+    
     h(54)=uicontrol('Parent',h(1), ... % Centroid finding label
       'Units','characters','Position',[7 top-38.53 24.2 1.3],...
       'BackgroundColor',[0.788 1 0.576],'HorizontalAlignment','left',...
       'Style','text','String','Find marker centroid');
-
+    
     h(55)=uicontrol('Parent',h(1),... % Centroid finding checkbox
       'Units','characters','BackgroundColor',[0.788 1 0.576],...
       'Position',[29 top-38.2 4 1],'Value',0,'Style','checkbox','Tag',...
       'findCentroidBox','enable','off','Callback','DLTdv5(14)');
-
+    
     h(56) = uicontrol('Parent',h(1), ... % Autotrack predictor mode label
       'Units','characters','Position',[7 top-21.63 29.2 1.3],...
       'BackgroundColor',[0.788 1 0.576],'HorizontalAlignment','left',...
       'Style','text','String','Autotrack predictor');
-
+    
     predMenu={'extended Kalman','double exponential','1st order poly',...
       'static point'};
-
+    
     h(57) = uicontrol(... % Autotrack predictor mode menu
       'Parent',h(1),'Units','characters','Position',...
       [30.2 top-21.63 20 1.6],'String',predMenu,'Style','popupmenu',...
       'Value',1,'Tag','popupmenu2','Enable','off','Callback',...
       'DLTdv5(1)');
-
+    
     h(58) = uicontrol('Parent',h(1), ... % Centroid color label
       'Units','characters','Position',[34 top-38.53 14.2 1.3],...
       'BackgroundColor',[0.788 1 0.576],'HorizontalAlignment','left',...
       'Style','text','String','Color');
-
+    
     h(59) = uicontrol(... % Centroid color menu
       'Parent',h(1),'Units','characters','Position',...
       [42 top-38.43 11 1.6],'String',{'black','white'},'Style',...
       'popupmenu','Value',1,'Tag','popupmenu3','Enable','off');
-
+    
     h(60) = uicontrol('Parent',h(1), ... % DLT threshold label
       'Units','characters','Position',[9 top-30.83 19.2 1.3],...
       'BackgroundColor',[0.788 1 0.576],'HorizontalAlignment','left',...
       'Style','text','String','Threshold:');
-
+    
     h(61) = uicontrol('Parent',h(1),... % DLT residual threshold
       'Units','characters','BackgroundColor',[1 1 1],'Position', ...
       [21.8 top-30.8 9.8 1.6],'String','3','Style','edit','Tag','edit8',...
       'Callback','DLTdv5(10)','enable','off');
-
+    
     h(62) = uicontrol('Parent',h(1), ... % Update all videos
       'Units','characters','Position',[7 top-32.73 19.2 1.3],...
       'BackgroundColor',[0.788 1 0.576],'HorizontalAlignment','left',...
       'Style','text','String','Update all videos');
-
+    
     h(63)=uicontrol('Parent',h(1),... % Update all videos checkbox
       'Units','characters','BackgroundColor',[0.788 1 0.576],...
       'Position',[29 top-32.6 4 1],'Value',1,'Style','checkbox','Tag',...
       'updateVideos','enable','off');
-  
+    
     h(64)=uicontrol('Parent',h(1), ... % 2D tracks label
       'Units','characters','Position',[7 top-36.63 24.2 1.3],...
       'BackgroundColor',[0.788 1 0.576],'HorizontalAlignment','left',...
       'Style','text','String','Show 2D tracks');
-
+    
     h(65)=uicontrol('Parent',h(1),... % 2D tracks checkbox
       'Units','characters','BackgroundColor',[0.788 1 0.576],...
       'Position',[29 top-36.33 4 1],'Value',0,'Style','checkbox','Tag',...
       'DLTfeedbackbox','enable','on','Callback','DLTdv5(1)');
-
+    
     ud.handles=h; % simple Userdata object
-
+    
     % for each handle set all handle info in Userdata
     for i=1:numel(h)
       setappdata(h(i),'Userdata',ud);
@@ -421,12 +422,12 @@ switch call
     if exist('movegui')==2
       movegui(h(1));
     end
-
+    
     return
-
-%% case 0 - Initialize button callback
+    
+    %% case 0 - Initialize button callback
   case {0} % Initialize button press from the GUI
-
+    
     % ask the user how many videos to load
     [uda.nvid,ok]=...
       listdlg('PromptString','How many videos do you have?', ...
@@ -434,7 +435,7 @@ switch call
       '7','8','9'}, 'Name', ...
       '# of videos','listsize',[160 80]);
     pause(0.1); % make sure that the listdlg executed (MATLAB bug)
-
+    
     if ok==0
       disp('Initialization canceled, please try again.')
       return
@@ -491,7 +492,7 @@ switch call
         set(h(325+i),'enable','off')
       end
     end
-
+    
     for i=1:uda.nvid
       % browse for each video file
       pause(0.01); % make sure that the uigetfile executed (MATLAB bug)
@@ -505,7 +506,7 @@ switch call
         '*.mrf','IDT Redlake movies (*.mrf)'; ...
         '*.mov','Apple movies (*.mov)'}, ...
         sprintf('Pick movie file %.0d',i));
-
+      
       pause(0.01); % make sure that the uigetfile executed (MATLAB bug)
       try
         setappdata(h(300+i),'fname',[pname1,fname1]);
@@ -524,7 +525,7 @@ switch call
         return
       end
     end
-
+    
     % Initialize the data arrays
     %
     % set the slider size
@@ -551,13 +552,13 @@ switch call
     uda.wdMode=false; % assume not in wing digitizing mode
     currframe(i:uda.nvid,1)=1; % set current frame to 1 for all videos
     cdataCache=cell(uda.nvid,1); % initialize cdataCache
-
+    
     % plot the first images in each axis
     for i=1:uda.nvid
-
+      
       % make the axis of interest active and visible
       set(h(i+300),'Visible','on');
-
+      
       % read the video frame; assume it is grayscale
       movname=getappdata(h(i+300),'fname');
       [mov,fname]=mediaRead(movname,1,false,false); % grab the 1st frame
@@ -572,32 +573,32 @@ switch call
           disp(['Movie ',movname,' is compressed and may read slowly.'])
         end
       end
-
+      
       % store the movie frame sizes
       uda.movsizes(i,1)=size(mov.cdata,1);
       uda.movsizes(i,2)=size(mov.cdata,2);
-
+      
       % plot the frame
       redlakeplot(mov.cdata(:,:),h(i+300));
       colormap(h(i+300),gray(256));
       cdataCache{i}=mov.cdata; % cache the image
-
+      
       set(gca,'XTickLabel','');
       set(gca,'YTickLabel','');
       setappdata(h(i+300),'Userdata',ud);
       set(get(h(i+300),'Children'),'ButtonDownFcn','DLTdv5(3)');
       setappdata(get(h(i+300),'Children'),'Userdata',ud);
-
+      
       % store an initial drawVid value
       uda.drawVid(i)=true;
     end
-
+    
     % query for calibrated cameras and load the DLT coefficients
-
+    
     if uda.nvid>1
       dlt=questdlg('Are these cameras calibrated via DLT?','Use DLT?', ...
         'yes','no','yes');
-
+      
       switch dlt % setup DLT coefficients of desired
         case 'yes'
           pause(0.01); % make sure that the uigetfile executed (MATLAB bug)
@@ -610,8 +611,8 @@ switch call
           if strcmpi('.csv',fname1(end-3:end))
             uda.dltcoef=dlmread([pname1,fname1],',');
             uda.dltcoef=uda.dltcoef(:,1:uda.nvid); % prune to # of videos
-          
-          % else if user loaded new matlab based data file
+            
+            % else if user loaded new matlab based data file
           elseif strcmpi('.mat',fname1(end-3:end))
             dltdata=[];
             wd=[];
@@ -625,7 +626,7 @@ switch call
               uda.wdMode=true;
             end
           end
-            
+          
           uda.dlt=1; % DLT on
           set(h(53),'enable','on')
           set(h(61),'enable','on') % residual threshold
@@ -633,7 +634,7 @@ switch call
         case 'no'
           uda.dlt=0; % DLT off
       end
-
+      
     else
       uda.dlt=0; % DLT off (if uda.nvid~>1)
     end
@@ -641,7 +642,7 @@ switch call
     % create blank undistortion profile entries
     uda.camd{i}=[];
     uda.camud{i}=[];
-
+    
     % turn on the other controls
     set(h(5),'enable','on'); % frame slider
     set(h(7),'enable','on'); % save button
@@ -655,11 +656,11 @@ switch call
     set(h(38),'enable','on'); % autotrack search area size textbox
     set(h(39),'enable','on'); % autotrack threshold textbox
     set(h(57),'enable','on'); % autotrack mode pull-down menu
-
+    
     % turn on Centroid finding & set value to "On" if the image analysis
     % toolbox functions that it depends on are available
-    if exist('im2bw','file')==2 && exist('regionprops','file')==2 && ...
-        exist('bwlabel','file')==2
+    if exist('im2bw')~=0 && exist('regionprops')~=0 && ...
+        exist('bwlabel')~=0
       set(h(55),'enable','on','Value',0);
       disp('Detected Image Analysis toolbox, centroid localization is')
       disp('available, enable it via the checkbox in the Controls window.')
@@ -667,29 +668,29 @@ switch call
       disp('The Image Analysis toolbox is not available, centroid ')
       disp('localization has been disabled.')
     end
-
+    
     % if more than 1 video, enable to video updating checkbox
     if uda.nvid >1
       set(h(63),'enable','on');
     end
-
+    
     % turn off the Initialize button
     set(h(6),'enable','off');
-
+    
     % write the Userdata back
     uda.handles=h; % copy in new handles
     setappdata(h(1),'Userdata',uda);
     setappdata(h(1),'currframe',currframe);
     setappdata(h(1),'cdataCache',cdataCache);
-
+    
     % call self to update the string fields
     DLTdv5(4,uda);
     
     DLTdv5(1,uda);
-
-%% case 1 - refresh video frames
+    
+    %% case 1 - refresh video frames
   case {1} % refresh the video frames
-
+    
     currframe=getappdata(h(1),'currframe');
     colorVal=get(h(12),'Value'); % get color mode info
     % generate a new, gamma-scaled colormap if in grayscale mode
@@ -697,12 +698,12 @@ switch call
       c=colormap(gray(256));
       cnew=c.^get(h(13),'Value');
     end
-
+    
     if strcmp(get(h(6),'enable'),'off')==1 % if initialized
       fr=round(get(h(5),'Value')); % get the frame # from the slider
       set(h(5),'Value',fr); % set the rounded value back
       frmax=get(h(5),'Max'); % get the slider max
-
+      
       % loop through each axes and update it if appropriate
       for i=1:uda.nvid
         % check to see if we should update this axis
@@ -711,19 +712,19 @@ switch call
           ud=getappdata(h(i+300),'Userdata');
           xl=xlim(h(i+300));
           yl=ylim(h(i+300));
-
+          
           % read the offset if not the first camera
           offset=str2double(get(h(325+i),'String'));
-
+          
           % write the offset
           uda.offset(fr,i)=offset;
-
+          
           % read the video frame if possible and/or necessary
           if fr+offset <= 0 || fr+offset>frmax
             % no image available
             mov.cdata=chex(1,round(xl(2)),round(yl(2)));
             cdataCache{i}=mov.cdata;  % cache the image
-
+            
           elseif fr+offset ~= currframe(i) || uda.reloadVid==true
             % need new image from file (or oData if autotracking)
             try
@@ -731,7 +732,7 @@ switch call
                 mov=oData.movs{i};
                 if isempty(mov)
                   mov=mediaRead(fname,fr+offset,get(h(12),'Value'),...
-                  get(h(350+i),'value'));
+                    get(h(350+i),'value'));
                 end
               else
                 mov=mediaRead(fname,fr+offset,get(h(12),'Value'),...
@@ -741,13 +742,13 @@ switch call
               mov.cdata=chex(1,round(xl(2)),round(yl(2)));
             end
             cdataCache{i}=mov.cdata;  % cache the image
-
+            
           else
             % image already in memory
             cdataCache=getappdata(h(1),'cdataCache');
             mov.cdata=cdataCache{i};
           end
-
+          
           % plot the frame parameters
           hold(h(300+i),'off')
           if colorVal==0 %gray
@@ -763,10 +764,10 @@ switch call
             % we're forced to just do linear scaling - i.e. change the
             % image brightness
             cdata=mov.cdata+(1-get(h(13),'Value'))*128;
-
+            
             redlakeplot(cdata,h(i+300));
           end
-
+          
           currframe(i)=fr+offset;
           set((h(i+300)),'XTickLabel','');
           set((h(i+300)),'YTickLabel','');
@@ -775,15 +776,15 @@ switch call
           xlim(h(i+300),xl); ylim(h(i+300),yl); % restore axis zoom
           hold(h(300+i),'on')
         end
-
+        
       end % end for loop through the video axes
-
+      
       % call quickRedraw to add the non-image graphics
       quickRedraw(uda,h,sp,fr);
       
       % set the force redraw switch to false
       uda.reloadVid=false;
-
+      
       % call self to update the text fields
       DLTdv5(4,uda);
       
@@ -792,18 +793,18 @@ switch call
       setappdata(h(1),'currframe',currframe);
       setappdata(h(1),'cdataCache',cdataCache);
     end
-
-%% case 2 - key press callback
+    
+    %% case 2 - key press callback
   case {2} % handle keypresses in the figure window - zoom & unzoom axes
     me = find(h==gcbo);
     cc=get(h(me),'CurrentCharacter'); % the key pressed
     pl=get(0,'PointerLocation'); % pointer location on the screen
     pos=get(h(me),'Position'); % get the figure position
     fr=round(get(h(5),'Value')); % get the current frame
-
+    
     % calculate pointer location in normalized units
     plocal=[(pl(1)-pos(1,1)+1)/pos(1,3), (pl(2)-pos(1,2)+1)/pos(1,4)];
-
+    
     % if the keypress is empty or is a lower-case x, shut off the
     % auto-tracker
     if isempty(cc)
@@ -840,13 +841,13 @@ switch call
           disp(estr);
           return
         end
-
+        
       end
     end
-
+    
     % process the key press
     if (cc=='=' || cc=='-' || cc=='r') && axh~=0; % check for zoom keys
-
+      
       % zoom in or out as indicated
       if axh~=0
         axpos=get(h(axh),'Position'); % axis position in figure
@@ -860,15 +861,15 @@ switch call
           disp('The pointer must be over a video during zoom operations.')
           return
         end
-
+        
         % calculate the actual pixel postion of the pointer
         pixpos=round([(xl(2)-xl(1))*plocal2(1)+xl(1) ...
           (yl(2)-yl(1))*plocal2(2)+yl(1)]);
-
+        
         % axis location in pixels (idealized)
         axpix(3)=pos(3)*axpos(3);
         axpix(4)=pos(4)*axpos(4);
-
+        
         % adjust pixels for distortion due to normalized axes
         xRatio=(axpix(3)/axpix(4))/(diff(xl)/diff(yl));
         yRatio=(axpix(4)/axpix(3))/(diff(yl)/diff(xl));
@@ -881,7 +882,7 @@ switch call
           ympd=pixpos(2)-ymp;
           pixpos(2)=pixpos(2)+ympd*(yRatio-1);
         end
-
+        
         % set the figure xlimit and ylimit
         if cc=='=' % zoom in
           xlim([pixpos(1)-(xl(2)-xl(1))/3 pixpos(1)+(xl(2)-xl(1))/3]);
@@ -893,14 +894,14 @@ switch call
           xlim([0 uda.movsizes(vnum,2)]);
           ylim([0 uda.movsizes(vnum,1)]);
         end
-
+        
         % set drawnow for the axis in question
         uda.drawVid(vnum)=true;
-
+        
       end
-
-    % check for valid movement keys  
-    elseif cc=='f' || cc=='b' || cc=='F' || cc=='B' || cc=='<' || cc=='>' && axh~=0 
+      
+      % check for valid movement keys
+    elseif cc=='f' || cc=='b' || cc=='F' || cc=='B' || cc=='<' || cc=='>' && axh~=0
       fr=round(get(h(5),'Value')); % get current slider value
       smax=get(h(5),'Max'); % max slider value
       smin=get(h(5),'Min'); % max slider value
@@ -943,7 +944,7 @@ switch call
             end
           end
         end
-
+        
       elseif cc=='b' && fr-1 >= smin
         set(h(5),'Value',fr-1); % current frame - 1
         fr=fr-1;
@@ -965,16 +966,16 @@ switch call
           end
         end
       end
-
+      
       % full redraw of the screen
       DLTdv5(1,uda);
-
+      
       % update the control / zoom window
       % 1st retrieve the cp from the data file in case the autotracker
       % changed it
       cp=uda.xypts(fr,vnum*2-1:vnum*2,sp);
       updateSmallPlot(h,vnum,cp);
-
+      
     elseif cc=='n' % add a new point
       yesNo=questdlg('Are you sure you want to add a point?',...
         'Add a point?','Yes','No','No');
@@ -984,7 +985,7 @@ switch call
       else
         return
       end
-
+      
     elseif cc=='.' || cc==',' % change point
       % get current pull-down list (available points)
       ptnum=numel(get(h(32),'String'))/3; % need str2num here
@@ -996,15 +997,15 @@ switch call
         set(h(32),'Value',ptval+1);
         ptval=ptval+1;
       end
-
+      
       pt=uda.xypts(fr,vnum*2-1:vnum*2,ptval);
-
+      
       % update the magnified point view
       updateSmallPlot(h,vnum,pt);
-
+      
       % do a quick screen redraw
       quickRedraw(uda,h,ptval,fr);
-
+      
     elseif cc=='i' || cc=='j' || cc=='k' || cc=='m' || cc=='4' || ...
         cc=='8' || cc=='6' || cc=='2' % nudge point
       % check and see if there is a point to nudge, get it's value if
@@ -1014,7 +1015,7 @@ switch call
       else
         pt=uda.xypts(fr,vnum*2-1:vnum*2,sp);
       end
-
+      
       % modify pt based on the 'nudge' value
       nudge=0.5; % 1/2 pixel nudge
       if cc=='i' || cc=='8'
@@ -1026,10 +1027,10 @@ switch call
       else
         pt(1,2)=pt(1,2)-nudge; % down
       end
-
+      
       % set the modified point
       uda.xypts(fr,vnum*2-1:vnum*2,sp)=pt;
-
+      
       % DLT update
       if sum(isnan(uda.xypts(fr,:,sp))-1)<=-4 && uda.dlt==1 % 2+ xy pts
         udist=uda.xypts(fr,:,sp);
@@ -1045,13 +1046,13 @@ switch call
         uda.dltpts(fr,1:3,sp)=NaN; % set DLT points to NaN
         uda.dltres(fr,1,sp)=NaN; % set DLT residuals to NaN
       end
-
+      
       % update the magnified point view
       updateSmallPlot(h,vnum,pt);
-
+      
       % do a quick screen redraw
       quickRedraw(uda,h,sp,fr);
-
+      
     elseif cc==' ' % space bar (digitize a point)
       set(h(2),'CurrentAxes',axh); % set the current axis
       axpos=get(axh,'Position'); % axis position in figure
@@ -1061,19 +1062,19 @@ switch call
         -axpos(1,2))/axpos(1,4)];
       
       % check to make sure we're inside the figure!
-        if sum(plocal2>0.99 | plocal2<0)>0
-          disp('The pointer must be over a video to digitize a point.')
-          return
-        end
-
+      if sum(plocal2>0.99 | plocal2<0)>0
+        disp('The pointer must be over a video to digitize a point.')
+        return
+      end
+      
       % calculate the actual pixel postion of the pointer
       pixpos=([(xl(2)-xl(1)+0)*plocal2(1)+xl(1) ...
         (yl(2)-yl(1)+0)*plocal2(2)+yl(1)]);
-
+      
       % axis location in pixels (idealized)
       axpix(3)=pos(3)*axpos(3);
       axpix(4)=pos(4)*axpos(4);
-
+      
       % adjust pixels for distortion due to normalized axes
       xRatio=(axpix(3)/axpix(4))/(diff(xl)/diff(yl));
       yRatio=(axpix(4)/axpix(3))/(diff(yl)/diff(xl));
@@ -1086,21 +1087,21 @@ switch call
         ympd=pixpos(2)-ymp;
         pixpos(2)=pixpos(2)+ympd*(yRatio-1);
       end
-
+      
       % setup oData for the digitization routine
       oData.seltype='standard';
       oData.cp=pixpos;
       oData.axn=vnum;
       DLTdv5(3,uda,oData); % digitize a point
       return
-
+      
     elseif cc=='z' % delete the current point
       oData.seltype='alt';
       oData.cp=[NaN,NaN];
       oData.axn=vnum;
       DLTdv5(3,uda,oData); % digitize a point
       return
-
+      
     elseif cc=='R' % recompute 3D locations
       disp('Recomputing all 3D coordinates.')
       for i=1:size(uda.xypts,3)
@@ -1152,7 +1153,7 @@ switch call
         uda=storeUndo(uda);
         
         % update number of points
-        uda.numpts=uda.numpts+-1; 
+        uda.numpts=uda.numpts+-1;
         
         % update the number of points settings
         ptstring=char(ones(1,uda.numpts*2+uda.numpts-1));
@@ -1233,7 +1234,7 @@ switch call
         disp('Point joining canceled.')
       end
       
-      elseif cc=='S' % bring up swap interface
+    elseif cc=='S' % bring up swap interface
       ptList=[];
       ptSeq=(1:uda.numpts);
       for i=1:numel(ptSeq)
@@ -1256,7 +1257,7 @@ switch call
         uda.dltres(:,:,min([sp,selection]))=dltrestmp(:,:,max([sp,selection]));
         uda.dltres(:,:,max([sp,selection]))=dltrestmp(:,:,min([sp,selection]));
         
-
+        
         setappdata(h(1),'Userdata',uda); % write the new Userdata back
         
         DLTdv5(1,uda); % call self to update video frames
@@ -1295,7 +1296,7 @@ switch call
         
         % delete the split points
         uda.xypts(numrng(1):numrng(2),vnum*2-1:vnum*2,sp)=NaN;
-         
+        
         uda.numpts=uda.numpts+1; % update number of points
         
         % update other data arrays
@@ -1339,7 +1340,7 @@ switch call
       end
       
     else
-
+      
       % wing display mode nudge keys
       if uda.wdMode
         % get active wing number
@@ -1348,7 +1349,7 @@ switch call
         else
           wNum=2;
         end
-
+        
         if cc=='q'
           uda.wd.wingAngles(fr,1,wNum)=uda.wd.wingAngles(fr,1,wNum)+.1;
         elseif cc=='a'
@@ -1374,20 +1375,20 @@ switch call
         elseif cc=='D'
           uda.wd.wingRoots(fr,3,wNum)=uda.wd.wingRoots(fr,3,wNum)-.3;
         end
-
+        
         quickRedraw(uda,h,sp,fr);
-
+        
       end
-
+      
     end % end of main keypress evaluation loop
-
+    
     % write back any modifications to the main figure Userdata
     setappdata(h(1),'Userdata',uda);
-
-%% case 3 - mouse click on image callback
+    
+    %% case 3 - mouse click on image callback
   case {3} % handle button clicks in axes
     % disp('case 3: handle button clicks')
-
+    
     if strcmp(get(gcbo,'Tag'),'VideoFigure')
       % entered the function via space bar, not mouse click
       seltype=oData.seltype;
@@ -1402,7 +1403,7 @@ switch call
       
     end
     fr=round(get(h(5),'Value')); % get the current frame
-
+    
     % different actions depend on selection types
     if strcmp(seltype,'alt')==true || strcmp(seltype,'normal')==true
       % set NaN point for right click
@@ -1412,11 +1413,11 @@ switch call
       elseif strcmp(seltype,'normal') && get(h(55),'Value')==true
         [cp]=click2centroid(h,cp,axn);
       end
-
+      
       % set the points for the current frame
       uda.xypts(fr,axn*2-1,sp)=cp(1,1); % set x point
       uda.xypts(fr,axn*2,sp)=cp(1,2); % set y point
-
+      
       % DLT update if 2 or more xy pts
       if sum(isnan(uda.xypts(fr,:,sp))-1)<=-4 && uda.dlt==1
         udist=uda.xypts(fr,:,sp);
@@ -1432,19 +1433,19 @@ switch call
         uda.dltpts(fr,1:3,sp)=NaN; % set DLT points to NaN
         uda.dltres(fr,1,sp)=NaN; % set DLT residuals to NaN
       end
-
+      
       % new data available, change the recently saved parameter to false
       uda.recentlysaved=0;
-
+      
       % zoomed window update
       updateSmallPlot(h,axn,cp);
-
+      
       setappdata(h(1),'Userdata',uda); % pass back complete user data
-
+      
       % quick screen refresh to show the new point & possibly DLT info
       quickRedraw(uda,h,sp,fr);
     end % end of click selection type processing for normal & alt clicks
-
+    
     % process auto-tracker options that depend on click
     autoT=get(h(35),'Value'); % 1=off, 2=advance, 3=semi, 4=auto, 5=multi
     if strcmp(seltype,'normal')==true && autoT>1
@@ -1464,19 +1465,19 @@ switch call
       keyadvance=2; % set keyadvance variable for DLTautotrack function
       axn=1; % default axis
       [uda]=DLTautotrack2fun(uda,h,keyadvance,axn,cp,fr,sp);
-
+      
       % full redraw of the screen
       DLTdv5(1,uda);
     end
-
-%% case 4 - update GUI text fields
+    
+    %% case 4 - update GUI text fields
   case {4}	% update the text fields
     % set the frame # string
     fr=round(get(h(5),'Value')); % get current frame & max from the slider
     frmax=get(h(5),'Max');
     set(h(21),'String',['/' num2str(frmax)]);
     set(h(8),'String',num2str(fr));
-
+    
     % set the DLT residual
     if uda.dlt
       set(h(33),'String',['DLT residual: ' num2str(uda.dltres(fr,1,sp))]);
@@ -1501,15 +1502,15 @@ switch call
           sprintf('%.3f',uda.wd.wingRoots(fr,3,i)));
       end
     end
-
-
-%% case 5 - save data button
+    
+    
+    %% case 5 - save data button
   case {5} % save data
-
+    
     % get a place to save it
     pname=uigetdir(pwd,'Pick a directory to contain the output files');
     pause(0.1); % make sure that the uigetdir executed (MATLAB bug)
-
+    
     % get a prefix
     %pfix=inputdlg({'Enter a prefix for the data files'},...
     %  'Data prefix',1,{'trial01'});
@@ -1517,7 +1518,7 @@ switch call
     if cncl==true
       return
     end
-
+    
     % test for existing files
     if exist([pname,filesep,pfix,'xyzpts.csv'],'file')~=0
       overwrite=questdlg('Overwrite existing data?', ...
@@ -1525,7 +1526,7 @@ switch call
     else
       overwrite='Yes';
     end
-
+    
     % create headers (dltpts)
     dlth=cell(3*size(uda.dltpts,3),1);
     for i=1:size(uda.dltpts,3)
@@ -1533,13 +1534,13 @@ switch call
       dlth{i*3-1}=sprintf('pt%s_Y',num2str(i));
       dlth{i*3-0}=sprintf('pt%s_Z',num2str(i));
     end
-
+    
     % create headers (dltres)
     dlthr=cell(size(uda.dltpts,3),1);
     for i=1:size(uda.dltpts,3)
       dlthr{i}=sprintf('pt%s_dltres',num2str(i));
     end
-
+    
     % create headers (xypts)
     numPts=size(uda.dltpts,3);
     xyh=cell(uda.nvid*numPts*2,1);
@@ -1551,13 +1552,13 @@ switch call
           sprintf('pt%s_cam%s_Y',num2str(i),num2str(j));
       end
     end
-
+    
     % create headers (offset)
     offh=cell(uda.nvid,1);
     for i=1:uda.nvid
       offh{i}=sprintf('cam%s_offset',num2str(i));
     end
-
+    
     if strcmp(overwrite,'Yes')==1
       % dltpts
       f1=fopen([pname,filesep,pfix,'xyzpts.csv'],'w');
@@ -1566,7 +1567,7 @@ switch call
         fprintf(f1,'%s,',dlth{i});
       end
       fprintf(f1,'%s\n',dlth{end});
-
+      
       % data
       for i=1:size(uda.dltpts,1);
         tempData=squeeze(uda.dltpts(i,:,:));
@@ -1576,7 +1577,7 @@ switch call
         fprintf(f1,'%.6f\n',tempData(end));
       end
       fclose(f1);
-
+      
       % xypts
       f1=fopen([pname,filesep,pfix,'xypts.csv'],'w');
       % header
@@ -1593,7 +1594,7 @@ switch call
         fprintf(f1,'%.6f\n',tempData(end));
       end
       fclose(f1);
-
+      
       % xyzres
       f1=fopen([pname,filesep,pfix,'xyzres.csv'],'w');
       % header
@@ -1610,7 +1611,7 @@ switch call
         fprintf(f1,'%.6f\n',tempData(end));
       end
       fclose(f1);
-
+      
       % offsets
       f1=fopen([pname,filesep,pfix,'offsets.csv'],'w');
       % header
@@ -1718,14 +1719,14 @@ switch call
         dltdata.coefs=uda.dltcoef;
         save([pname,filesep,pfix,'wdData.mat'],'wd','dltdata');
       end
-
+      
       uda.recentlysaved=1;
       setappdata(h(1),'Userdata',uda); % pass back complete user data
-
+      
       msgbox('Data saved.');
     end
-
-%% case 6 - load points button
+    
+    %% case 6 - load points button
   case {6} % load previously saved points
     % load the xy points file
     [fname1,pname1]=...
@@ -1733,25 +1734,25 @@ switch call
     pause(0.1); % make sure that the uigetfile executed (MATLAB bug)
     pfix=[pname1,fname1];
     pfix(end-8:end)=[]; % remove the 'xypts.csv' portion
-
+    
     % load the exported dlt points
     tempData=dlmread([pfix,'xyzpts.csv'],',',1,0);
     len=size(tempData,1);
     numpts=size(tempData,2)/3; % number of points
     % reshape to final uda.dltpts size
     uda.dltpts=reshape(tempData,len,3,numpts);
-
+    
     % load the exported dlt residuals
     tempData=dlmread([pfix,'xyzres.csv'],',',1,0);
     uda.dltres=reshape(tempData,len,1,numpts); % reshape to uda.dltres size
-
+    
     % load the exported xy points
     tempData=dlmread([pfix,'xypts.csv'],',',1,0);
     uda.xypts=reshape(tempData,len,size(tempData,2)/numpts,numpts);
-
+    
     % load the exported offset
     uda.offset=dlmread([pfix,'offsets.csv'],',',1,0);
-
+    
     % check for similarity with video data
     newsize=size(uda.xypts,1); % size of the new points data
     oldsize=size(uda.offset,1); % offset size was set by # of frames
@@ -1762,7 +1763,7 @@ switch call
         'Warning','warn','modal')
       return
     end
-
+    
     % set offsets in the text boxes to their average (non-zero) values from
     % the offsets file, then warn the user
     for i=2:uda.nvid
@@ -1778,7 +1779,7 @@ switch call
     msgbox(['WARNING - check the offset values, they may not be correct'...
       ,'for partially digitizied files.'], ...
       'Warning','warn','modal')
-
+    
     % update the number of points settings
     uda.numpts=numpts;
     ptstring=char(ones(1,numpts*2+numpts-1));
@@ -1787,11 +1788,11 @@ switch call
     end
     ptstring(1,numpts*4-3:numpts*4-1)=sprintf('%3d',numpts);
     set(h(32),'String',ptstring);
-
+    
     % call self to update the video fields
     DLTdv5(1,uda);
-
-%% case 7 - frame selection text box
+    
+    %% case 7 - frame selection text box
   case {7} % frame text box
     % get and validate input
     newFrame=str2double(get(h(8),'String'));
@@ -1807,14 +1808,14 @@ switch call
     else
       newFrame=round(newFrame);
     end
-
+    
     % apply new frame number by setting the slider and making a recursive
     % call to the frame update code
     set(h(5),'Value',newFrame)
     DLTdv5(1,uda);
     return
-
-%% case 8 - validate video offsets text
+    
+    %% case 8 - validate video offsets text
   case {8} % validate the video offsets text
     % disp('case 8: validate the video offsets text')
     offset=str2double(get(gcbo,'String'));
@@ -1827,10 +1828,10 @@ switch call
       disp('Corrected invalid input, video offsets must be integers')
       set(gcbo,'String','0'); % set the offset to zero
     end
-	uda.reloadVid=true;
+    uda.reloadVid=true;
     DLTdv5(1,uda); % call self to update video frames
-
-%% case 9 - validate autotrack search width
+    
+    %% case 9 - validate autotrack search width
   case {9} % validate autotrack search width
     % disp('case 9: validate the autotrack search width')
     atwidth=str2double(get(gcbo,'String'));
@@ -1841,10 +1842,10 @@ switch call
       disp('Auto-track width should be a positive integer')
       set(gcbo,'String','9')
     end
-
-%% case 10 - validate autotrack threshold
+    
+    %% case 10 - validate autotrack threshold
   case {10} % validate autotrack threshold
-
+    
     % disp('case 10: validate the autotrack threshold')
     thold=str2double(get(gcbo,'String'));
     if thold>=0 || isnan(thold)
@@ -1854,10 +1855,10 @@ switch call
       disp('Auto-track threshold should be a positive real number or NaN')
       set(gcbo,'String','10')
     end
-
-%% case 11 - Quit button
+    
+    %% case 11 - Quit button
   case {11} % Quit button
-
+    
     reallyquit=...
       questdlg('Are you sure you want to quit?','Quit?','yes','no','no');
     pause(0.1); % make sure that the questdlg executed (MATLAB bug)
@@ -1877,8 +1878,8 @@ switch call
         end
       end
     end
-
-%% case 12 - Add-a-point button
+    
+    %% case 12 - Add-a-point button
   case {12} % add-a-point button
     uda.numpts=uda.numpts+1; % update number of points
     ptstring=get(h(32),'String'); % get current pull-down list
@@ -1890,17 +1891,17 @@ switch call
     end
     set(h(32),'String',ptstring); % write updated list back
     set(h(32),'Value',uda.numpts(end)); % update value to the new point
-
+    
     % update the data matrices by adding the new dimension
     uda.xypts(:,:,uda.numpts)=NaN;
     uda.dltpts(:,:,uda.numpts)=NaN;
     uda.dltres(:,:,uda.numpts)=NaN;
-
+    
     setappdata(h(1),'Userdata',uda); % write the new Userdata back
-
+    
     DLTdv5(1,uda); % call self to update video frames
-
-%% case 13 - Window close via non-Matlab method
+    
+    %% case 13 - Window close via non-Matlab method
   case {13} % Window close via non-Matlab method
     % if initialization completed and there is data to save
     if uda.recentlysaved==0;
@@ -1933,8 +1934,8 @@ switch call
       end
     catch
     end
-
-%% case 14 - Centroid finding checkbox
+    
+    %% case 14 - Centroid finding checkbox
   case {14} % Click / unclick Centroid finding checkbox
     % enable or disable color menu
     if get(h(55),'Value')==1
@@ -1943,7 +1944,7 @@ switch call
       set(h(59),'enable','off')
     end
     
-%% case 15 - Color video checkbox
+    %% case 15 - Color video checkbox
   case {15} % Click / unclick color video checkbox
     if get(h(12),'Value')==0
       set(h(55),'enable','on')
@@ -1955,8 +1956,8 @@ switch call
     end
     uda.reloadVid=true; % force video reload in next redraw
     DLTdv5(1,uda); % redraw screen
-
-%% case 16 - Wing angle textbox processing
+    
+    %% case 16 - Wing angle textbox processing
   case {16}
     % get current frame #
     fr=round(get(h(5),'Value')); % get the frame # from the slider
@@ -1982,11 +1983,11 @@ switch call
     setappdata(h(1),'Userdata',uda); % write the new Userdata back
     DLTdv5(1,uda); % call self to update video frames
     
-%% case 17 - refresh video frames with forced frame reload
+    %% case 17 - refresh video frames with forced frame reload
   case {17}
     uda.reloadVid=1;
     DLTdv5(1,uda);
-
+    
     %% case 18 - add an undistortion file to a video
   case {18}
     videoNumber=getappdata(get(gcbo,'parent'),'videoNumber');
@@ -2008,7 +2009,7 @@ switch call
     
     setappdata(h(1),'Userdata',uda); % write the new Userdata back
     DLTdv5(1,uda); % call self to update video frames
-
+    
 end % end of switch / case statement
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2042,7 +2043,7 @@ if verLessThan('matlab', '8.4')
 else
   h=image(varargin{1},'CDataMapping','scaled','parent',ax,'PickableParts','none');
 end
-  
+
 
 %set(h,'EraseMode','normal'); % no longer supported in r2014b; not needed
 colormap(ax,gray(256))
@@ -2155,15 +2156,15 @@ x=z*NaN;
 y=z*NaN;
 for i=1:2
   Z=z(i);
-
+  
   y(i)= -(u*C1(9)*C1(7)*Z + u*C1(9)*C1(8) - u*C1(11)*Z*C1(5) -u*C1(5) + ...
     C1(1)*v*C1(11)*Z + C1(1)*v - C1(1)*C1(7)*Z - C1(1)*C1(8) - ...
     C1(3)*Z*v*C1(9) + C1(3)*Z*C1(5) - C1(4)*v*C1(9) + C1(4)*C1(5)) / ...
     (u*C1(9)*C1(6) - u*C1(10)*C1(5) + C1(1)*v*C1(10) - C1(1)*C1(6) - ...
     C1(2)*v*C1(9) + C1(2)*C1(5));
-
+  
   Y=y(i);
-
+  
   x(i)= -(v*C1(10)*Y+v*C1(11)*Z+v-C1(6)*Y-C1(7)*Z-C1(8))/(v*C1(9)-C1(5));
 end
 
@@ -2327,11 +2328,11 @@ end
 % loop through each axis
 for A=1:numel(AAxn)
   axn=AAxn(A); % set the working axis
-
+  
   % extract image
   kids=get(h(axn+300),'Children'); % children of current axis
   imdat=get(kids(end),'CData'); % read current image
-
+  
   % setup spM (selected point matrix) for this video axis
   spM(1,axn)=0;
   if atMode==5 % multi-mode
@@ -2382,12 +2383,12 @@ while fr < frmax && trackFailed==false && get(h(35),'Value')~=1
   fr=fr+1; % increment the frame number by 1
   
   % track frames that fail to track in this round
-  localFailedFrames=failedFrames*0; 
-
+  localFailedFrames=failedFrames*0;
+  
   % loop through each axis
   for A=1:numel(AAxn)
     axn=AAxn(A); % set the working axis
-
+    
     % setup video stream and tag
     if axn>1
       offset=str2double(get(h(axn+325),'String')); % video stream offset
@@ -2396,28 +2397,28 @@ while fr < frmax && trackFailed==false && get(h(35),'Value')~=1
       offset=0;
     end
     fname=getappdata(h(axn+300),'fname'); % fname holds the movie filename
-
+    
     % load and process the next frame
     oData.movs{axn}=mediaRead(fname,fr+offset,get(h(12),'Value'),get(h(350+A),'Value'));
     imdat=oData.movs{axn}.cdata(:,:,:);
-
+    
     % for each point in the tracking set
     for S=1:numel(find(spM(:,A)>0));
       sp=spM(S,A); % selected point
-
+      
       % in multi mode, don't overwrite existing data
       if atMode==5 && isnan(uda.xypts(fr,axn*2,sp))==false
         % do nothing - the point already exists
       else
         % extract roibase from the preloaded matrix
         roibase=squeeze(RB(:,:,:,S,A)); % S = selected point, A = axis
-
+        
         % call the prediction function - it will use the other digitized
         % point locations to try and predict the location of the next point
         otherpts=uda.xypts(:,axn*2-1:axn*2,sp);
         [x,y,uda.predSeed]=AutoTrackPredictor(otherpts,fr-1,get(h(57), ...
           'Value'),uda.predSeed);
-
+        
         % constrain x & y to fit within imdat
         if x>size(imdat,2) || x<1
           x=round(otherpts(fr-1,1));
@@ -2425,7 +2426,7 @@ while fr < frmax && trackFailed==false && get(h(35),'Value')~=1
         if y>size(imdat,1) || y<1
           y=round(otherpts(fr-1,2));
         end
-
+        
         % search for a matching image in the next frame using the
         % predicted x & y coordinates
         gammaS=get(h(13),'Value');
@@ -2438,19 +2439,19 @@ while fr < frmax && trackFailed==false && get(h(35),'Value')~=1
           ynew=NaN;
         end
         cp=[xnew,ynew]; % update currentpoint
-
+        
         % Search for a marker centroid (if desired & possible)
         findCent=get(h(55),'Value'); % check the UI for permission
         if isnan(cp(1))==0 && findCent==1
           [cp]=click2centroid(h,cp,axn,imdat);
         end
-
+        
         % update uda.xypts
         uda.xypts(fr,axn*2-1,sp)=cp(1,1); % set x point
         uda.xypts(fr,axn*2,sp)=cp(1,2); % set y point
         uda.offset(fr,axn)=offset; % set offset
         intData.fitt(sp,axn)=fitt; % keep fitt for later decision-making
-
+        
         % post-matching decision making
         if fitt < thold || isnan(fitt)
           failedFrames(S,A)=failedFrames(S,A)+1;
@@ -2490,15 +2491,15 @@ while fr < frmax && trackFailed==false && get(h(35),'Value')~=1
           end
         end % end of "if fitt" block
       end % end of multi-mode doesn't overwrite data "if" block
-
+      
     end % end of points loop
   end % end of axes loop
-
+  
   % strip any zeros from the intData.fitt matrix
   intData.fitt(intData.fitt==0)=NaN;
-
+  
   % DLT update
-  dltSet=unique(spM); 
+  dltSet=unique(spM);
   dltSet(dltSet<1)=[];
   for sp=dltSet'
     if sum(isnan(uda.xypts(fr,:,sp))-1)<=-4 && uda.dlt==1 % 2+ xy pts
@@ -2511,7 +2512,7 @@ while fr < frmax && trackFailed==false && get(h(35),'Value')~=1
       [xyz,res]=dlt_reconstruct(uda.dltcoef,udist); % do DLT
       uda.dltpts(fr,1:3,sp)=xyz(1:3); % get the DLT points
       uda.dltres(fr,1,sp)=res; % get the DLT residual
-
+      
       % check that we didn't exceed the DLT residual threshold
       if res > str2double(get(h(61),'String'))
         failedFrames(S,A)=failedFrames(S,A)+1;
@@ -2531,27 +2532,27 @@ while fr < frmax && trackFailed==false && get(h(35),'Value')~=1
         uda.dltpts(fr,1:3,sp)=xyz(1:3); % get the DLT points
         uda.dltres(fr,1,sp)=res; % get the DLT residual
       end
-
+      
     else
       uda.dltpts(fr,1:3,sp)=NaN; % set DLT points to NaN
       uda.dltres(fr,1,sp)=NaN; % set DLT residuals to NaN
     end
   end
-
+  
   % change current point if necessary
   set(h(32),'Value',spReturn);
-
+  
   % set auto-tracker fit text
   try
     set(h(27),'String',...
       ['Autotrack fit: ',num2str(intData.fitt(spReturn,axnReturn))]);
   catch
   end
-
+  
   % advance a frame and redraw the screen
   set(h(5),'Value',fr);
   DLTdv5(1,uda,oData); % call self for video refresh
-
+  
   if atMode==3 || (atMode==5 && keyadvance==1)
     if keyadvance==0 %click advance in semiauto mode
       quickRedraw(uda,h,sp,fr);
@@ -2571,8 +2572,8 @@ while fr < frmax && trackFailed==false && get(h(35),'Value')~=1
   
   % reset failedFrames to zero in cases where we acquired data
   failedFrames=failedFrames.*localFailedFrames;
-
-  pause(.01); % let MATLAB draw the figure
+  
+  pause(.05); % let MATLAB draw the figure
 end % end of main auto-track "while" loop
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2625,7 +2626,7 @@ for i=1:size(chunk,3)
   % the cross-correlation
   chunk(:,:,i)=rot90(detrend(rot90(detrend(chunk(:,:,i)))),-1);
   prevRegion(:,:,i)=rot90(detrend(rot90(detrend(prevRegion(:,:,i)))),-1);
-
+  
   % calculate the cross-correlation matrix of the chunk to the previous
   % region
   xc(:,:,i) = conv2(chunk(:,:,i), fliplr(flipud(prevRegion(:,:,i))));
@@ -2639,7 +2640,7 @@ for i=1:size(chunk,3)
   
   % give signal-to-noise ratio as fit
   fit(i)=max(xc_s(:))/(sum(abs(xc_s(:)))/numel(xc_s)+0.001);
-
+  
   % set fit to -1 if it is a NaN
   if isnan(fit(i))==1
     fit(i)=-1;
@@ -2816,40 +2817,42 @@ rmse(1:nFrames,1)=NaN;
 
 % process each frame
 for i=1:nFrames
-
+  
   % get a list of cameras with non-NaN [u,v]
   cdx=find(isnan(camPts(i,1:2:nCams*2))==false);
-
+  
   % if we have 2+ cameras, begin reconstructing
   if numel(cdx)>=2
-
+    
     % initialize least-square solution matrices
     m1=[];
     m2=[];
-
+    
     m1(1:2:numel(cdx)*2,1)=camPts(i,cdx*2-1).*c(9,cdx)-c(1,cdx);
     m1(1:2:numel(cdx)*2,2)=camPts(i,cdx*2-1).*c(10,cdx)-c(2,cdx);
     m1(1:2:numel(cdx)*2,3)=camPts(i,cdx*2-1).*c(11,cdx)-c(3,cdx);
     m1(2:2:numel(cdx)*2,1)=camPts(i,cdx*2).*c(9,cdx)-c(5,cdx);
     m1(2:2:numel(cdx)*2,2)=camPts(i,cdx*2).*c(10,cdx)-c(6,cdx);
     m1(2:2:numel(cdx)*2,3)=camPts(i,cdx*2).*c(11,cdx)-c(7,cdx);
-
+    
     m2(1:2:numel(cdx)*2,1)=c(4,cdx)-camPts(i,cdx*2-1);
     m2(2:2:numel(cdx)*2,1)=c(8,cdx)-camPts(i,cdx*2);
-
+    
     % get the least squares solution to the reconstruction
     xyz(i,1:3)=linsolve(m1,m2);
-
+    
     % compute ideal [u,v] for each camera
     uv=m1*xyz(i,1:3)';
-
+    
     % compute the number of degrees of freedom in the reconstruction
     dof=numel(m2)-3;
-
+    
     % estimate the root mean square reconstruction error
     rmse(i,1)=(sum((m2-uv).^2)/dof)^0.5;
   end
 end
+
+%rmse=rrmse(c,camPts,xyz);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2930,14 +2933,14 @@ uicontrol('Parent',h(101), ...
 % start tiling wing entries onto the interface
 incHandle=102; % iterator for the handle entry
 for i=1:nWings
-
+  
   % button
   h(incHandle) = uicontrol('Parent',bg, ...
     'Units','characters','Position',[1.2 wdH-(1+3*i) 19.2 1.3],...
     'BackgroundColor',wdClr,'HorizontalAlignment','left',...
     'Style','radio','String',['wing #',num2str(i)]);
   incHandle=incHandle+1;
-
+  
   % Phi box
   h(incHandle) = uicontrol('Parent',h(101), ...
     'Units','characters','Position',[20 wdH-(1+3*i) 9 1.3],...
@@ -2945,7 +2948,7 @@ for i=1:nWings
     'Style','edit','String',num2str(wd.wingAngles(1,1,1)),...
     'callback','DLTdv5(16)');
   incHandle=incHandle+1;
-
+  
   % Theta box
   h(incHandle) = uicontrol('Parent',h(101), ...
     'Units','characters','Position',[30 wdH-(1+3*i) 9 1.3],...
@@ -2953,7 +2956,7 @@ for i=1:nWings
     'Style','edit','String',num2str(wd.wingAngles(1,2,1)),...
     'callback','DLTdv5(16)');
   incHandle=incHandle+1;
-
+  
   % R box
   h(incHandle) = uicontrol('Parent',h(101), ...
     'Units','characters','Position',[40 wdH-(1+3*i) 9 1.3],...
@@ -2961,7 +2964,7 @@ for i=1:nWings
     'Style','edit','String',num2str(wd.wingAngles(1,3,1)),...
     'callback','DLTdv5(16)');
   incHandle=incHandle+1;
-
+  
   % Root box X
   h(incHandle) = uicontrol('Parent',h(101), ...
     'Units','characters','Position',[50 wdH-(1+3*i) 9 1.3],...
@@ -2969,7 +2972,7 @@ for i=1:nWings
     'Style','edit','String',num2str(wd.wingRoots(1,1,1)),...
     'callback','DLTdv5(16)');
   incHandle=incHandle+1;
-
+  
   % Root box Y
   h(incHandle) = uicontrol('Parent',h(101), ...
     'Units','characters','Position',[60 wdH-(1+3*i) 9 1.3],...
@@ -2977,7 +2980,7 @@ for i=1:nWings
     'Style','edit','String',num2str(wd.wingRoots(1,2,1)),...
     'callback','DLTdv5(16)');
   incHandle=incHandle+1;
-
+  
   % Root box Z
   h(incHandle) = uicontrol('Parent',h(101), ...
     'Units','characters','Position',[70 wdH-(1+3*i) 9 1.3],...
@@ -2985,7 +2988,7 @@ for i=1:nWings
     'Style','edit','String',num2str(wd.wingRoots(1,3,1)),...
     'callback','DLTdv5(16)');
   incHandle=incHandle+1;
-
+  
 end
 
 % for each handle set all handle info in Userdata
@@ -3009,10 +3012,10 @@ function quickRedraw(uda,h,sp,fr)
 if uda.wdMode==true && isnan(sum(uda.wd.ypr(fr,:)))==false
   % get rotation matrix from body to global
   [Hib,Hbi] = aeroROTM(uda.wd.ypr(fr,3),uda.wd.ypr(fr,2),uda.wd.ypr(fr,1));
-
+  
   % number of points per wing
   wL=size(uda.wd.wings,1);
-
+  
   % build the 3d representation of each wing
   wings=uda.wd.wings*NaN;
   for j=1:size(uda.wd.wings,3)
@@ -3032,10 +3035,10 @@ if uda.wdMode==true && isnan(sum(uda.wd.ypr(fr,:)))==false
       sign(uda.wd.wAxes(3,1,j)),uda.wd.wingAngles(fr,3,j));
     % add the wing root
     wings(:,:,j)=wings(:,:,j)+repmat(uda.wd.wingRoots(fr,:,j),wL,1);
-
+    
     % rotate the wing into the global CS
     wings(:,:,j)=applyAeroRotationMatrix(wings(:,:,j),Hbi);
-
+    
     % add global CoM position
     wings(:,:,j)=wings(:,:,j)+repmat(uda.wd.CoM(fr,:),wL,1);
   end
@@ -3043,16 +3046,16 @@ end
 
 % loop through each axes and update it
 for i=1:uda.nvid
-
+  
   % get current x limits
   xl=xlim(h(i+300));
-
+  
   % get the kids & delete everything but the image
   kids=get(h(i+300),'Children');
   if length(kids)>1
     delete(kids(1:end-1)); % assume the bottom of the stack is the image
   end
-
+  
   % plot any XY points (selected point)
   if isnan(uda.xypts(fr,i*2,sp))==0
     plot(h(i+300),uda.xypts(fr,(i)*2-1,sp),uda.xypts(fr,i*2,sp),'ro', ...
@@ -3060,10 +3063,10 @@ for i=1:uda.nvid
     
   end
   
-
+  
   % get the user settings for plotting the extended DLT information
   dltvf=get(h(53),'Value');
-
+  
   % plot any DLT points (selected point) if desired
   if isnan(uda.dltpts(fr,1,sp))==0 && dltvf==1
     xy=dlt_inverse(uda.dltcoef(:,i),uda.dltpts(fr,:,sp));
@@ -3076,12 +3079,12 @@ for i=1:uda.nvid
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     plot(h(i+300),xy(1),xy(2),'gd','HitTest','off','markersize',14,'linewidth',2);
   end
-
+  
   % if no XY points & no DLT points plot partialDLT line if possible
   % & desired
   if isnan(uda.xypts(fr,i*2,sp)) && isnan(uda.dltpts(fr,1,sp)) ...
       && sum(isnan(uda.xypts(fr,:,sp))-1)==-2 && uda.dlt==1 && dltvf==1
-
+    
     idx=find(isnan(uda.xypts(fr,:,sp))==0);
     dltcoef1=uda.dltcoef(:,idx(2)/2);
     dltcoef2=uda.dltcoef(:,i);
@@ -3124,7 +3127,7 @@ for i=1:uda.nvid
         xyptsN(D>50,:)=[];
       end
       xyptsN=sortrows(xyptsN,1);
-
+      
       % distort the line of zero error
       xyptsN=applyTform(camD,xyptsN);
       
@@ -3134,38 +3137,89 @@ for i=1:uda.nvid
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %htmp=plot(h(i+300),xpts,ypts,'b-','HitTest','off','PickableParts','none');
     if verLessThan('matlab', '8.4')
-        htmp=plot(h(i+300),xpts,ypts,'b-','HitTest','off');
+      htmp=plot(h(i+300),xpts,ypts,'b-','HitTest','off');
     else
-        htmp=plot(h(i+300),xpts,ypts,'b-','PickableParts','none');
+      htmp=plot(h(i+300),xpts,ypts,'b-','PickableParts','none');
     end
-%    htmp
+    %    htmp
   end
-
+  
   % plot non-selected points
   twoDtracks=get(h(65),'value');
   if uda.numpts>0 && twoDtracks
+    
+%     % original way with quite a few loops
+%     ptarray=1:uda.numpts; % array of all the points
+%     ptarray(sp)=[]; % remove the selected point
+%     % XY
+%     xyPts=shiftdim(uda.xypts(fr,i*2-1:i*2,ptarray))';
+%     xyPts(isnan(xyPts(:,1)),:)=[];
+%     plot(h(i+300),xyPts(:,1),xyPts(:,2),'co','HitTest','off');
+%     
+%     %plot tracks for all non selected birds
+%     for k=1:uda.numpts
+%       
+%       plot(h(i+300),uda.xypts(:,i*2-1,k),uda.xypts(:,i*2,k),'y-o',...
+%         'markersize',4,'HitTest','on',...
+%         'ButtonDownFcn',{@selectTrackByClick,h,uda,k,fr,i});
+%       
+%       % setup index for strongly colored frames
+%       idx=fr-4:fr+4;
+%       idx=idx(idx>0 & idx<=size(uda.xypts,1));
+%       plot(h(i+300),uda.xypts(idx,i*2-1,k),uda.xypts(idx,i*2,k),'c-o',...
+%         'markersize',4,'HitTest','on',...
+%         'ButtonDownFcn',{@selectTrackByClick,h,uda,k,fr,i});     
+%     end
+    
+    
+%     % plot track of current bird
+%     plot(h(i+300),uda.xypts(:,(i)*2-1,sp),uda.xypts(:,i*2,sp),'m-o','markersize',4, 'HitTest','off');
+    
+    
+    % The code below should work but sometimes crashes MATLAB 2014b on linux :(
+    
     ptarray=1:uda.numpts; % array of all the points
     ptarray(sp)=[]; % remove the selected point
     % XY
     xyPts=shiftdim(uda.xypts(fr,i*2-1:i*2,ptarray))';
     xyPts(isnan(xyPts(:,1)),:)=[];
     plot(h(i+300),xyPts(:,1),xyPts(:,2),'co','HitTest','off');
+    %disp('done xy current')
+    %pause(1)
     
-    %plot tracks for all non selected birds
-    for k=1:uda.numpts
+    %plot tracks for all non selected birds - for performance reasons these
+    %are plotted as a single line, doing anything else becomes very slow
+    %for large numbers of points (i.e. > 100).  This does complicate
+    %figuring out which point was clicked on when the line is selected by
+    %the user, to facilitate this the line IDs are stored in the linegroup
+    %userdata
+    if numel(ptarray)>0
+      bxy=[];
+      bxy=uda.xypts(:,i*2-1:i*2,ptarray);
+      bxy(:,3,:)=repmat(ptarray,size(bxy,1),1);
+      bxy(end+1,:,:)=NaN;
+      bxyr=reshape(permute(bxy,[2,1,3]),3,numel(bxy)/3)';
+      lgh=plot(h(i+300),bxyr(:,1),bxyr(:,2),'y-o','markersize',4,'HitTest',...
+        'on','ButtonDownFcn',{@selectTrackByClick2,h,uda,fr,i});
+      set(lgh,'Userdata',bxyr(:,3));
+      %disp('done xy all')
+      %pause(1)
       
-      plot(h(i+300),uda.xypts(:,i*2-1,k),uda.xypts(:,i*2,k),'y-o',...
-        'markersize',4,'HitTest','on',...
-        'ButtonDownFcn',{@selectTrackByClick,h,uda,k,fr,i});
-      
-      % setup index for strongly colored frames
+      % plot tracks for all non selected birds, use a different color for the
+      % part close to the current frame
       idx=fr-4:fr+4;
       idx=idx(idx>0 & idx<=size(uda.xypts,1));
-      plot(h(i+300),uda.xypts(idx,i*2-1,k),uda.xypts(idx,i*2,k),'c-o',...
-        'markersize',4,'HitTest','on',...
-        'ButtonDownFcn',{@selectTrackByClick,h,uda,k,fr,i});
-      
+      bxy=uda.xypts(idx,i*2-1:i*2,ptarray);
+      bxy(:,3,:)=repmat(ptarray,size(bxy,1),1);
+      bxy(end+1,:,:)=NaN;
+      bxyr=reshape(permute(bxy,[2,1,3]),3,numel(bxy)/3)';
+      lgh=plot(h(i+300),bxyr(:,1),bxyr(:,2),'c-o','markersize',4,'HitTest',...
+        'on','ButtonDownFcn',{@selectTrackByClick2,h,uda,fr,i});
+      set(lgh,'Userdata',bxyr(:,3));
+      %disp('done close-in xy all')
+      %pause(1)
     end
+    
     % plot track of current bird
     plot(h(i+300),uda.xypts(:,(i)*2-1,sp),uda.xypts(:,i*2,sp),'m-o','markersize',4, 'HitTest','off');
     
@@ -3190,7 +3244,7 @@ for i=1:uda.nvid
     for j=1:size(wings,3)
       % compute XY coordinates for the wing
       wingXY=dlt_inverse(uda.dltcoef(:,i),wings(:,:,j));
-
+      
       % set wing color
       try
         wc=wco{j};
@@ -3211,6 +3265,38 @@ DLTdv5(4,uda);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% selectTrackByClick
 function [] = selectTrackByClick(src,eventdata,h,uda,sp,fr,vnum)
+
+% update pull-down menu
+set(h(32),'Value',sp)
+
+% get new xy location in the frame in question (for magnified plot)
+pt=uda.xypts(fr,vnum*2-1:vnum*2,sp);
+
+% update the magnified point view
+updateSmallPlot(h,vnum,pt);
+
+% do a quick screen redraw
+quickRedraw(uda,h,sp,fr);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% selectTrackByClick
+function [] = selectTrackByClick2(src,eventdata,h,uda,fr,vnum)
+
+% need to figure out sp from the clicked location and the line ID info
+% stored in the linegroup userdata
+
+% clicked location
+cp=get(get(gcbo,'Parent'),'CurrentPoint');
+cp=cp(1,1:2);
+
+% xy locations in this video
+xy(:,1)=get(gcbo,'Xdata');
+xy(:,2)=get(gcbo,'Ydata');
+d=rnorm(repmat(cp,size(xy,1),1)-xy);
+idx=find(d==min(d));
+pnums=get(gcbo,'Userdata');
+sp=pnums(idx(1));
 
 % update pull-down menu
 set(h(32),'Value',sp)
@@ -3283,14 +3369,14 @@ for i=1:nPts
   
   % enforce minimum error
   rmse(rmse<minErr)=minErr;
-
+  
   % don't trust rmse values from only two cameras; instead replace them
   % with the average for all two-camera situations
   nanSums=sum(abs(1-isnan(icamPts(:,2:2:nCams*2))),2);
   nanSums(nanSums==0)=NaN;
   mnRmse=mean(rmse(nanSums==2));
   rmse(nanSums==2)=mnRmse;
-
+  
   % bootstrap loop
   xyzBS(1:size(xyz,1),1:3,1:bsIter)=NaN;
   for j=1:bsIter
@@ -3302,13 +3388,13 @@ for i=1:nPts
       end
     end
     [xyzBS(:,:,j)] = dlt_reconstruct(coefs,per);
-    waitbar((((i-1)/nPts)+(j/(nPts*bsIter))),h); 
+    waitbar((((i-1)/nPts)+(j/(nPts*bsIter))),h);
   end
-
+  
   for j=1:size(xyz,1)
     xyzSD(j,i*3-2:i*3)=inanstd(rot90(squeeze(xyzBS(j,:,:))));
   end
-
+  
 end
 
 % build confidence intervals
@@ -3364,17 +3450,17 @@ for i=1:size(data,2)
   
   % Non-NaN index
   idx=find(isnan(data(:,i))==false);
-
+  
   if numel(idx)>3
     [sp] = spaps(X(idx),data(idx,i)',tol(i),weights(idx,i),sporder);
-
+    
     % get the derivative of the spline
     spD = fnder(sp,order);
-
+    
     % compute the derivative values on X
     Ddata(idx,i) = fnval(spD,X(idx));
   end
-
+  
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3384,13 +3470,13 @@ end
 function [out,fitted]=dlt_splineInterp(in,type)
 
 % function [out,fitted]=dlt_splineInterp(in,'type')
-% Description: 	Fills in NaN points with the result of a cubic spline 
+% Description: 	Fills in NaN points with the result of a cubic spline
 %	       	interpolation.  Marks fitted points with a '1' in a new,
 %	       	final column for identification as false points later on.
 %	       	This function is intended to work with 3-D points output
 %	       	from the 'reconfu' Kinemat function.  Points marked with
 %					a '2' were not fitted because of a lack of data
-%	
+%
 %					'type' should be either 'nearest','linear','cubic' or 'spline'
 %
 %					Note: the 'fitted' return variable is only 1 column no matter
@@ -3402,28 +3488,28 @@ function [out,fitted]=dlt_splineInterp(in,type)
 fitted(1:size(in,1),1)=0; % initialize the fitted output matrix
 
 for k=1:size(in,2) % for each column
-	Y=in(:,k); % the Y (function resultant) value is the column of interest
-	X=(1:1:size(Y,1))'; % X is a linear sequence of the same length as Y
-
-	Xi=X; Yi=Y; % duplicate X and Y and use the duplicates to mess with
-
-	nandex=find(isnan(Y)==1); % get an index of all the NaN values
-	fitted(nandex,1)=1; % set the fitted matrix based on the known NaNs
-
-	Xi(nandex,:)=[]; % delete all NaN rows from the interpolation matrices
-	Yi(nandex,:)=[]; 
-
-	if size(Xi,1)>=1 % check that we're not dealing with all NaNs
-		Ynew=interp1(Xi,Yi,nandex,type,'extrap'); % interpolate new Y values
-		in(nandex,k)=Ynew; % set the new Y values in the matrix
-		if sum(isnan(Ynew))>0
-			disp('dlt_splineInterp: Interpolation error, try the linear option')
-			break
-		end
-	else
-		% only NaNs, don't interpolate
-	end
-
+  Y=in(:,k); % the Y (function resultant) value is the column of interest
+  X=(1:1:size(Y,1))'; % X is a linear sequence of the same length as Y
+  
+  Xi=X; Yi=Y; % duplicate X and Y and use the duplicates to mess with
+  
+  nandex=find(isnan(Y)==1); % get an index of all the NaN values
+  fitted(nandex,1)=1; % set the fitted matrix based on the known NaNs
+  
+  Xi(nandex,:)=[]; % delete all NaN rows from the interpolation matrices
+  Yi(nandex,:)=[];
+  
+  if size(Xi,1)>=1 % check that we're not dealing with all NaNs
+    Ynew=interp1(Xi,Yi,nandex,type,'extrap'); % interpolate new Y values
+    in(nandex,k)=Ynew; % set the new Y values in the matrix
+    if sum(isnan(Ynew))>0
+      disp('dlt_splineInterp: Interpolation error, try the linear option')
+      break
+    end
+  else
+    % only NaNs, don't interpolate
+  end
+  
 end
 
 out=in; % set output variable
@@ -3488,7 +3574,7 @@ ss = nd*3; % system size (position, velocity & acc for each data column)
 A=zeros(ss);
 for i=1:nd
   A(i,i)=1;
-  A(i,i+nd)=0; 
+  A(i,i+nd)=0;
   A(i+nd,i+nd)=1;
   A(i,i+nd*2)=2;
   A(i+nd*2,i+nd*2)=1;
@@ -3552,20 +3638,20 @@ filtSys = zeros(N,ss); % filtered system
 predSys = initSys;
 predCov = initCov;
 for i=1:N
-
+  
   e = seq(i,:) - (O*(predSys'))'; % error
-
+  
   S = O*predCov*O' + R;
   Sinv = inv(S);
-
+  
   K = predCov*O'*Sinv; % Kalman gain matrix
-
+  
   prevSys = predSys + (K*(e'))'; % a oosteriori prediction of system state
   prevCov = (eye(ss) - K*O)*predCov; % a posteriori covariance
-
+  
   predSys = (A*(prevSys'))'; % predict next system state
   predCov = A*prevCov*A' + Q; % predict next system covariance
-
+  
   filtSys(i,:)=prevSys; % store the a posteriori prediction
 end
 
@@ -3667,10 +3753,9 @@ function [mov,fname]=mediaRead(fname,frame,incolor,mirror)
 % function [mov,fname]=mediaRead(fname,frame,incolor,mirror);
 %
 % Wrapper function which uses VideoReader, mmreader, cineRead or mrfREad
-% depending on what type of file is detected.  Also performs the flipud() 
-% on the result of aviread and puts the cdata result from cineRead into a 
+% depending on what type of file is detected.  Also performs the flipud()
+% on the result of aviread and puts the cdata result from cineRead into a
 % mov.* structure.
-
 if ischar(fname)
   if strcmpi(fname(end-3:end),'.avi') || strcmpi(fname(end-3:end),'.mp4') || strcmpi(fname(end-3:end),'.mov')
     if exist('VideoReader')==2
@@ -3710,13 +3795,26 @@ else % fname is not a char so it is an mmreader or videoreader obj
     if ismethod(fname,'readFrame') % use readFrame if available
       % check current time & don't seek to a new time if we don't need to
       ctime=fname.CurrentTime;
-      ftime=(frame-1)*(1/fname.FrameRate); % start time of desired frame
-      if abs(ctime-ftime)<1/fname.FrameRate
+      %disp(['ctime is ',num2str(ctime)])
+      % ftime set to the beginning of the desired frame
+      ftime=(frame-1)*(1/fname.FrameRate);
+      %disp(['ftime is ',num2str(ftime)])
+      if abs(ctime-ftime)<(1/(fname.FrameRate*1.1))
+        % multiply by 1.1 to eliminate ambiguities when ctime-ftime is
+        % approximately 1 frame and differences are due to numeric
+        % imprecision
+        
         % no need to seek
+        %fname.CurrentTime=ftime;
+        %disp('seeking not needed')
       else
         fname.CurrentTime=ftime;
+        %disp('seeking')
       end
       mov.cdata=fname.readFrame;
+      ctime2=fname.CurrentTime;
+      %disp(['ctime is now ',num2str(ctime2)])
+      %disp('-')
     else
       mov.cdata=read(fname,frame);
     end
@@ -3772,8 +3870,8 @@ function [cdata] = cineRead(fileName,frameNum)
 % function [cdata] = cineRead(fileName,frameNum)
 %
 % Reads the frame specified by frameNum from the Phantom camera cine file
-% specified by fileName.  It will not read compressed cines.  Furthermore, 
-% the bitmap in cdata may need to be flipped, transposed or rotated to 
+% specified by fileName.  It will not read compressed cines.  Furthermore,
+% the bitmap in cdata may need to be flipped, transposed or rotated to
 % display properly in your imaging application.
 %
 % frameNum is 1-based and starts from the first frame available in the
@@ -3974,7 +4072,7 @@ function [cdata] = mrfRead(fileName,frameNum)
 %
 % This function does not depend on any of the Redlake software development
 % kit files and was developed purely from the file format descriptions in
-% the manual appendices.  It has been tested only with 8 & 10 bit 
+% the manual appendices.  It has been tested only with 8 & 10 bit
 % grayscale files from an N5 and may require further development or
 % debugging when used with files from other sources.
 %
@@ -4134,10 +4232,10 @@ function [Hib,Hbi] = aeroROTM(roll,pitch,yaw)
 %
 %Hib=yawR*pitchR*rollR;
 
-Hib = [cos(pitch)*cos(yaw), cos(pitch)*sin(yaw), -sin(pitch); 
-   (-cos(roll)*sin(yaw)+sin(roll)*sin(pitch)*cos(yaw)), ...
-   (cos(roll)*cos(yaw)+sin(roll)*sin(pitch)*sin(yaw)), ...
-   sin(roll)*cos(pitch);
+Hib = [cos(pitch)*cos(yaw), cos(pitch)*sin(yaw), -sin(pitch);
+  (-cos(roll)*sin(yaw)+sin(roll)*sin(pitch)*cos(yaw)), ...
+  (cos(roll)*cos(yaw)+sin(roll)*sin(pitch)*sin(yaw)), ...
+  sin(roll)*cos(pitch);
   (sin(roll)*sin(yaw)+cos(roll)*sin(pitch)*cos(yaw)), ...
   (-sin(roll)*cos(yaw)+cos(roll)*sin(pitch)*sin(yaw)), ...
   cos(roll)*cos(pitch)];
@@ -4165,10 +4263,10 @@ uvw=uvw./repmat(rnorm(uvw),1,3); % make sure UVW is a matrix of unit vectors
 
 if numel(theta)==1
   xyz=uvw.*(repmat(dot(uvw,xyz,2),1,3))+(xyz-uvw.*(repmat(dot(uvw,xyz,2),1,3))).* ...
-  cos(theta)+cross(xyz,uvw,2).*sin(theta);
+    cos(theta)+cross(xyz,uvw,2).*sin(theta);
 else
   xyz=uvw.*(repmat(dot(uvw,xyz,2),1,3))+(xyz-uvw.*(repmat(dot(uvw,xyz,2),1,3))).* ...
-  repmat(cos(theta),1,3)+cross(xyz,uvw,2).*repmat(sin(theta),1,3);
+    repmat(cos(theta),1,3)+cross(xyz,uvw,2).*repmat(sin(theta),1,3);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -4234,16 +4332,16 @@ end
 function  [pfix,cncl] = savePrefixDlg(pname)
 
 % function  [pfix,cncl] = savePrefixDlg(pname)
-% 
+%
 % Function for getting a savePrefix from the user
 
 % get list of extant data prefixes in this intended directory or set an
 % intelligent default
 pfxs=dir([pname,filesep,'*xypts.csv']);
 if numel(pfxs)>0
-for i=1:numel(pfxs)
-  pfxsCell{i}=pfxs(i).name(1:end-9);
-end
+  for i=1:numel(pfxs)
+    pfxsCell{i}=pfxs(i).name(1:end-9);
+  end
 else
   pfxsCell{1}='DLTdv5_data_';
 end
@@ -4256,19 +4354,19 @@ fp = [fp(1) fp(2) w h];  % set full figure position
 
 % set figure properties
 fig_props = { ...
-    'name'                   'Data file prefix' ...
-    'color'                  get(0,'DefaultUicontrolBackgroundColor') ...
-    'resize'                 'off' ...
-    'numbertitle'            'off' ...
-    'menubar'                'none' ...
-    'windowstyle'            'modal' ...
-    'visible'                'on' ...
-    'createfcn'              ''    ...
-    'position'               fp   ...
-    'closerequestfcn'        'delete(gcbf)' ...
-            };
- 
-% draw the figure          
+  'name'                   'Data file prefix' ...
+  'color'                  get(0,'DefaultUicontrolBackgroundColor') ...
+  'resize'                 'off' ...
+  'numbertitle'            'off' ...
+  'menubar'                'none' ...
+  'windowstyle'            'modal' ...
+  'visible'                'on' ...
+  'createfcn'              ''    ...
+  'position'               fp   ...
+  'closerequestfcn'        'delete(gcbf)' ...
+  };
+
+% draw the figure
 fig = figure(fig_props{:});
 
 % set instructions
@@ -4282,14 +4380,14 @@ txt = uicontrol('style','text', ...
 
 % draw listbox
 listbox = uicontrol('style','listbox',...
-                    'position',[1 70 200 80],...
-                    'string',pfxsCell,...
-                    'backgroundcolor','w',...
-                    'max',1,...
-                    'tag','pfxListBox',...
-                    'value',1, ...
-                    'callback', {@doListboxClick});
-                  
+  'position',[1 70 200 80],...
+  'string',pfxsCell,...
+  'backgroundcolor','w',...
+  'max',1,...
+  'tag','pfxListBox',...
+  'value',1, ...
+  'callback', {@doListboxClick});
+
 % setup textbox
 textbox = uicontrol('style','edit', ...
   'position',[1 40 200 20],...
@@ -4299,29 +4397,29 @@ textbox = uicontrol('style','edit', ...
 
 % setup ok button
 ok_btn = uicontrol('style','pushbutton',...
-                   'string','OK',...
-                   'position',[4 4 70 30],...
-                   'callback',{@doOK,listbox});
+  'string','OK',...
+  'position',[4 4 70 30],...
+  'callback',{@doOK,listbox});
 
 % setup cancel button
 cancel_btn = uicontrol('style','pushbutton',...
-                       'string','Cancel',...
-                       'position',[128 4 70 30],...
-                       'callback',{@doCancel,listbox});
-                     
-% wait for the user to do something 
+  'string','Cancel',...
+  'position',[128 4 70 30],...
+  'callback',{@doCancel,listbox});
+
+% wait for the user to do something
 uiwait(fig);
 
 % process results
 if isappdata(0,'ListDialogAppData__')
-    ad = getappdata(0,'ListDialogAppData__');
-    pfix = ad.prefix;
-    cncl = ad.cancel;
-    rmappdata(0,'ListDialogAppData__')
+  ad = getappdata(0,'ListDialogAppData__');
+  pfix = ad.prefix;
+  cncl = ad.cancel;
+  rmappdata(0,'ListDialogAppData__')
 else
-    % figure was deleted
-    pfix = '';
-    cncl = true;
+  % figure was deleted
+  pfix = '';
+  cncl = true;
 end
 
 
