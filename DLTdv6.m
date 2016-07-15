@@ -32,6 +32,7 @@ function [] = DLTdv6(varargin)
 % 2015-04-15 - fix problems relating to mp4 timebase
 % 2015-08-18 - Use "real" rmse instead of algebraic rmse
 % 2016-04-15 - turn off LWM errors (turn back on at exit)
+% 2016-07-11 - fixes from Dmitri Skandalis
 
 %% Function initialization
 if nargin==0 % no inputs, just fix the path and run the gui
@@ -139,7 +140,7 @@ switch call
   case {99} % Initialize the GUI
     
     fprintf('\n')
-    disp('DLTdv6 (updated June 23, 2016)')
+    disp('DLTdv6 (updated July 11, 2016)')
     fprintf('\n')
     disp('Visit http://www.unc.edu/~thedrick/ for more information,')
     disp('tutorials, sample data & updates to this program.')
@@ -740,7 +741,7 @@ switch call
     % pulldown menu for selecting 
     h(603) = uicontrol(...
       'Parent',h(600),'Units','characters','Position',...
-      [42 1.5 5 2],'String',s,'Style','popupmenu',...
+      [42 1.5 7 2],'String',s,'Style','popupmenu',...
       'Value',1,'Tag','popupmenu2','Enable','on','Callback',...
       @tsRedraw);
     
@@ -4558,7 +4559,7 @@ function [pseq] = getTSseq(h,fr,len)
 % width
 
 ww=str2double(get(h(602),'string'));
-if fr<len/2
+if fr<ww/2+1
   ls=round(max([1 fr-ww/2]));
   rs=round(min([len, ls+ww/2.1]));
 else
