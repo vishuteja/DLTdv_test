@@ -33,6 +33,7 @@ function [] = DLTdv6(varargin)
 % 2015-08-18 - Use "real" rmse instead of algebraic rmse
 % 2016-04-15 - turn off LWM errors (turn back on at exit)
 % 2016-07-11 - fixes from Dmitri Skandalis
+% 2016-07-26 - add simple background subtraction
 
 %% Function initialization
 if nargin==0 % no inputs, just fix the path and run the gui
@@ -140,7 +141,7 @@ switch call
   case {99} % Initialize the GUI
     
     fprintf('\n')
-    disp('DLTdv6 (updated July 11, 2016)')
+    disp('DLTdv6 (updated July 26, 2016)')
     fprintf('\n')
     disp('Visit http://www.unc.edu/~thedrick/ for more information,')
     disp('tutorials, sample data & updates to this program.')
@@ -215,16 +216,16 @@ switch call
     
     uicontrol('Parent',h(1),... % color video control label
       'Units','characters','BackgroundColor',[0.568 0.784 1],...
-      'HorizontalAlignment','left','Position',[37 top-8.03 17.0 1.3],...
+      'HorizontalAlignment','left','Position',[29.1 top-8.03 17.0 1.3],...
       'String','Display in color','Style','text','Tag','text1');
     
     h(12)=uicontrol('Parent',h(1),... % Color display checkbox
       'Units','characters','BackgroundColor',[0.568 0.784 1],...
-      'Position',[43 top-9.23 4 1],'Value',0,'Style','checkbox','Tag',...
+      'Position',[50 top-7.70 4 1],'Value',0,'Style','checkbox','Tag',...
       'colorVideos','enable','off','Callback','DLTdv6(15)');
     
     h(13) = uicontrol('Parent',h(1),... % video gamma slider
-      'Units','characters','Position',[7 top-9.23 28 1.3],'String',...
+      'Units','characters','Position',[7 top-9.23 20 1.3],'String',...
       {  'gamma' },'Style','slider','Tag','slider1','Min',.1','Max',...
       2,'Value',1,'Callback',@fullRedrawUI, ...
       'Enable','off', 'ToolTipString','Video Gamma slider');
@@ -233,7 +234,17 @@ switch call
       'Position',[39.8 top-4.43 15.2 3],'String','Quit',...
       'Tag','pushbutton4','Callback','DLTdv6(11)','enable','on');
     
-    % h(15-17) - unused
+    uicontrol('Parent',h(1),... % background subtraction label
+      'Units','characters','BackgroundColor',[0.568 0.784 1],...
+      'HorizontalAlignment','left','Position',[29.1 top-9.43 24.0 1.3],...
+      'String','Subtract background','Style','text','Tag','text1');
+    
+    h(15)=uicontrol('Parent',h(1),... % background subtraction checkbox
+      'Units','characters','BackgroundColor',[0.568 0.784 1],...
+      'Position',[50 top-9.03 4 1],'Value',0,'Style','checkbox','Tag',...
+      'backgroundSubtraction','enable','off','Callback','DLTdv6(16)');
+    
+    % h(16-17) - unused
     
     % h(18) - Gamma control label, see above
     
@@ -429,7 +440,7 @@ switch call
       movegui(h(1));
     end
     
-    % turn off LWM warnings
+    % turn off LWM warnings for 
     warning('off','images:inv_lwm:cannotEvaluateTransfAtSomeOutputLocations');
     
     
@@ -563,7 +574,12 @@ switch call
     uda.reloadVid=false; % force reload of all videos
     uda.gapJump=0; % number of "missing data" frames to try and skip over
     currframe(i:uda.nvid,1)=1; % set current frame to 1 for all videos
-    cdataCache=cell(uda.nvid,1); % initialize cdataCache - stored video frames
+    cacheDepth=10; % 
+    for i=1:uda.nvid
+      cdataCache{i}=cell(cacheDepth,1);
+      cdataCacheIdx{i}=zeros(cacheDepth,1);
+    end
+    %cdataCache=cell(uda.nvid,1); % initialize cdataCache - stored video frames
     
     % plot the first images in each axis
     for i=1:uda.nvid
@@ -593,7 +609,12 @@ switch call
       % plot the frame
       redlakeplot(mov.cdata(:,:),h(i+300));
       colormap(h(i+300),gray(256));
-      cdataCache{i}=mov.cdata; % cache the image
+      
+      % cache the image
+      cdataCache{i}=pushBuffer(cdataCache{i},mov.cdata);
+      cdataCacheIdx{i}=pushBuffer(cdataCacheIdx{i},1);
+      
+      %cdataCache{i}=mov.cdata; % cache the image
       
       set(gca,'XTickLabel','');
       set(gca,'YTickLabel','');
@@ -667,6 +688,7 @@ switch call
     set(h(8),'enable','on'); % frame number text box
     set(h(12),'enable','on'); % display color video checkbox
     set(h(13),'enable','on'); % video gamma control
+    set(h(15),'enable','on'); % background subtraction checkbox
     set(h(19),'enable','on'); % add point button
     set(h(22),'enable','on'); % load previous data button
     set(h(32),'enable','on'); % point # pulldown menu
@@ -767,6 +789,7 @@ switch call
     setappdata(h(1),'Userdata',uda);
     setappdata(h(1),'currframe',currframe);
     setappdata(h(1),'cdataCache',cdataCache);
+    setappdata(h(1),'cdataCacheIdx',cdataCacheIdx);
     
     % update the string fields
     updateTextFields(uda);
@@ -1935,13 +1958,35 @@ switch call
       set(h(59),'enable','off')
     end
     uda.reloadVid=true; % force video reload in next redraw
-    %DLTdv6(1,uda); % redraw screen
+    
+    % gather information & data
+    cdataCacheIdx=getappdata(h(1),'cdataCacheIdx');
+    
+    % clear cdataCacheIdx to avoid replotting old video
+    for i=1:uda.nvid
+      cdataCacheIdx{i}=pushBuffer(cdataCacheIdx{i},NaN,true);
+    end
+    setappdata(h(1),'cdataCacheIdx',cdataCacheIdx);
+        
+    fullRedraw(uda);
+    
+    %% case 15 - Color video checkbox
+  case {16} % Click / unclick background subtraction checkbox
     fullRedraw(uda);
        
     %% case 17 - refresh video frames with forced frame reload
   case {17}
     uda.reloadVid=1;
-    %DLTdv6(1,uda);
+    
+    % gather information & data
+    cdataCacheIdx=getappdata(h(1),'cdataCacheIdx');
+    
+    % clear cdataCacheIdx to avoid replotting old video
+    for i=1:uda.nvid
+      cdataCacheIdx{i}=pushBuffer(cdataCacheIdx{i},NaN,true);
+    end
+    setappdata(h(1),'cdataCacheIdx',cdataCacheIdx);
+    
     fullRedraw(uda);
     
     %% case 18 - add an undistortion file to a video
@@ -4397,10 +4442,12 @@ h=uda.handles;
 sp=get(h(32),'Value'); % get the selected point
 currframe=getappdata(h(1),'currframe');
 cdataCache=getappdata(h(1),'cdataCache');
+cdataCacheIdx=getappdata(h(1),'cdataCacheIdx');
+bsubVal=get(h(15),'Value'); % get background subtraction value
 
 colorVal=get(h(12),'Value'); % get color mode info
 % generate a new, gamma-scaled colormap if in grayscale mode
-if colorVal==0 % gray
+if colorVal==0 || bsubVal==true % gray
   c=repmat((0:1/255:1)',1,3); % gray(256) colormap
   cnew=c.^get(h(13),'Value');
 end
@@ -4433,10 +4480,17 @@ if strcmp(get(h(5),'enable'),'on')==1 % if initialized
       uda.offset(fr,i)=offset;
       
       % read the video frame if possible and/or necessary
-      if fr+offset <= 0 || fr+offset>frmax
+      % check the cache
+      idx=find(cdataCacheIdx{i}==fr+offset);
+      if numel(idx)>0 & uda.reloadVid==false
+        mov.cdata=cdataCache{i}{idx(1)};
+        %disp('Got frame from cache')
+      elseif fr+offset <= 0 || fr+offset>frmax
         % no image available
         mov.cdata=chex(1,round(xl(2)),round(yl(2)));
-        cdataCache{i}=mov.cdata;  % cache the image
+        cdataCache{i}=pushBuffer(cdataCache{i},mov.cdata);
+        cdataCacheIdx{i}=pushBuffer(cdataCacheIdx{i},fr+offset);
+        %cdataCache{i}=mov.cdata;  % cache the image
         
       elseif fr+offset ~= currframe(i) || uda.reloadVid==true
         % need new image from file (or oData if autotracking)
@@ -4458,16 +4512,41 @@ if strcmp(get(h(5),'enable'),'on')==1 % if initialized
         catch
           mov.cdata=chex(1,round(xl(2)),round(yl(2)));
         end
-        cdataCache{i}=mov.cdata;  % cache the image
+        %cdataCache{i}=mov.cdata;  % cache the image
+        cdataCache{i}=pushBuffer(cdataCache{i},mov.cdata);
+        cdataCacheIdx{i}=pushBuffer(cdataCacheIdx{i},fr+offset);
         
       else
-        % image already in memory
-        mov.cdata=cdataCache{i};
+        % % image already in memory
+        % mov.cdata=cdataCache{i};
+        disp('Warning - should not end in this condition!?')
       end
+      
+      % check for background subtraction
+      bsubFrame = -3; % frame step for background subtraction
+      if bsubVal==true
+        idx=find(cdataCacheIdx{i}==fr+bsubFrame+offset);
+        if numel(idx)>0
+          mov.cdata=double(mov.cdata)-double(cdataCache{i}{idx(1)});
+          %disp('Got background frame from cache')
+          
+          if size(mov.cdata,3)>1
+            mov.cdata=sum(mov.cdata,3);
+          end
+        elseif fr+offset+bsubFrame <= 0 || fr+offset+bsubFrame>frmax
+        % no image available, do nothing
+          disp('Background frame not available')
+        else
+        % image potentially available, still do nothing since any other
+        % option is very sluggish with compressed video
+          disp('Background frame not available in cache')
+        end
+      end
+          
       
       % plot the frame parameters
       hold(h(300+i),'off')
-      if colorVal==0 %gray
+      if colorVal==0 || (bsubVal==true && size(mov.cdata,3)==1) %gray
         redlakeplot(mov.cdata(:,:,1),h(i+300));
         colormap(h(i+300),cnew);
       elseif colorVal==1 && size(mov.cdata,3)==1 % color w/ gray video
@@ -4508,6 +4587,7 @@ if strcmp(get(h(5),'enable'),'on')==1 % if initialized
   setappdata(h(1),'Userdata',uda);
   setappdata(h(1),'currframe',currframe);
   setappdata(h(1),'cdataCache',cdataCache);
+  setappdata(h(1),'cdataCacheIdx',cdataCacheIdx);
 end
 
 function [] = figFocusFunc(varargin)
@@ -4614,3 +4694,41 @@ sp=get(h(32),'Value'); % get the selected point
 fr=round(get(h(5),'Value')); % get the current frame
 
 quickRedraw(uda,h,sp,fr);
+
+%%
+function [out] = pushBuffer(out,new,fill)
+
+% function [out] = pushBuffer(old,new,fill)
+%
+% Pushes new data into a finite length 1d array or cell array, allowing the
+% oldest data to drop out the back.  If fill is true all the buffer entries
+% are set to the new value, if fill is false or undefined only the "top"
+% entry is set to new.
+
+if exist('fill','var')==false
+  fill=false;
+end
+
+if fill==false
+  if iscell(out)
+    for i=numel(out)-1:-1:1
+      out{i+1}=out{i};
+    end
+    out{1}=new;
+  else
+    for i=numel(out)-1:-1:1
+      out(i+1)=out(i);
+    end
+    out(1)=new;
+  end
+else % fill = true
+  if iscell(out)
+    for i=numel(out):-1:1
+      out{i}=new;
+    end
+  else
+    for i=numel(out):-1:1
+      out(i)=new;
+    end
+  end
+end
