@@ -29,6 +29,7 @@ function [] = DLTdv5(varargin)
 % 2014-10-16 - updated for compatibility with r2014b new graphics
 % environment, checked for backward compatibility with r2013a and r2008b
 % 2015-04-15 - fix problems relating to mp4 timebase
+% 2016-08-18 - fix missing semicolon (Delyle Polet)
 
 %% Function initialization
 if nargin==0 % no inputs, just fix the path and run the gui
@@ -133,7 +134,7 @@ switch call
   case {99} % Initialize the GUI
     
     fprintf('\n')
-    disp('DLTdv5 (updated June 23, 2016)')
+    disp('DLTdv5 (updated August 18, 2016)')
     fprintf('\n')
     disp('Visit http://www.unc.edu/~thedrick/ for more information,')
     disp('tutorials, sample data & updates to this program.')
@@ -690,7 +691,7 @@ switch call
     
     %% case 1 - refresh video frames
   case {1} % refresh the video frames
-    uda.drawVid
+    uda.drawVid;
     currframe=getappdata(h(1),'currframe');
     colorVal=get(h(12),'Value'); % get color mode info
     % generate a new, gamma-scaled colormap if in grayscale mode

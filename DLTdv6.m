@@ -34,6 +34,8 @@ function [] = DLTdv6(varargin)
 % 2016-04-15 - turn off LWM errors (turn back on at exit)
 % 2016-07-11 - fixes from Dmitri Skandalis
 % 2016-07-26 - add simple background subtraction
+% 2016-08-17 - fix bug related to automatic tform loading and bug in dlt
+% residual display
 
 %% Function initialization
 if nargin==0 % no inputs, just fix the path and run the gui
@@ -141,7 +143,7 @@ switch call
   case {99} % Initialize the GUI
     
     fprintf('\n')
-    disp('DLTdv6 (updated July 26, 2016)')
+    disp('DLTdv6 (updated August 18, 2016)')
     fprintf('\n')
     disp('Visit http://www.unc.edu/~thedrick/ for more information,')
     disp('tutorials, sample data & updates to this program.')
@@ -624,6 +626,10 @@ switch call
       
       % store an initial drawVid value
       uda.drawVid(i)=true;
+      
+      % create blank undistortion profile entries
+      uda.camd{i}=[];
+      uda.camud{i}=[];
     end
     
     % query for calibrated cameras and load the DLT coefficients
@@ -677,10 +683,6 @@ switch call
     else
       uda.dlt=0; % DLT off (if uda.nvid~>1)
     end
-    
-    % create blank undistortion profile entries
-    uda.camd{i}=[];
-    uda.camud{i}=[];
     
     % turn on the other controls
     set(h(5),'enable','on'); % frame slider
@@ -4581,7 +4583,7 @@ if strcmp(get(h(5),'enable'),'on')==1 % if initialized
   uda.reloadVid=false;
   
   % call self to update the text fields
-  updateTextFields(uda);
+  % updateTextFields(uda);
   
   % write back any modifications to the main figure Userdata
   setappdata(h(1),'Userdata',uda);
