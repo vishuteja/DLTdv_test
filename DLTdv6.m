@@ -36,6 +36,9 @@ function [] = DLTdv6(varargin)
 % 2016-07-26 - add simple background subtraction
 % 2016-08-17 - fix bug related to automatic tform loading and bug in dlt
 % residual display
+% 2016-09-25 - fix bug with frame count display running out of space and
+% some changes to time series window display sequence calculation.
+% 2016-11-09 - fixes from Dmitri Skandalis
 
 %% Function initialization
 if nargin==0 % no inputs, just fix the path and run the gui
@@ -261,7 +264,7 @@ switch call
     
     h(21) = uicontrol('Parent',h(1),... % frame slider label
       'Units','characters','BackgroundColor',[0.568 0.784 1],...
-      'HorizontalAlignment','left','Position',[35 top-11.73 6.6 1.1],...
+      'HorizontalAlignment','left','Position',[35 top-11.73 10.6 1.1],...
       'String','/NaN','Style','text','Tag','text6');
     
     h(8) = uicontrol('Parent',h(1),... % frame text box
@@ -936,9 +939,15 @@ switch call
       elseif cc=='F' && fr+50 < smax
         set(h(5),'Value',fr+50); % current frame + 50
         fr=fr+50;
+      elseif cc=='F' && fr+50 > smax
+        set(h(5),'Value',smax); % set to last frame
+        fr=smax;
       elseif cc=='B' && fr-50 >= smin
         set(h(5),'Value',fr-50); % current frame - 50
         fr=fr-50;
+      elseif cc=='B' && fr-50 < smin
+        set(h(5),'Value',smin); % set to first frame
+        fr=smin;
         
       elseif cc=='<' || cc=='>' % switch to start or end of this point in this camera
         ptval=get(h(32),'Value'); % selected point
@@ -1337,6 +1346,8 @@ switch call
   case {3} % handle button clicks in axes
     % disp('case 3: handle button clicks')
     
+    autoT=get(h(35),'Value'); % 1=off, 2=advance, 3=semi, 4=auto
+    
     if strcmp(get(gcbo,'Tag'),'VideoFigure')
       % entered the function via space bar, not mouse click
       seltype=oData.seltype;
@@ -1390,12 +1401,14 @@ switch call
       
       setappdata(h(1),'Userdata',uda); % pass back complete user data
       
-      % quick screen refresh to show the new point & possibly DLT info
-      quickRedraw(uda,h,sp,fr);
+      % quick screen refresh to show the new point & possibly DLT info if
+      % we're not going to advance to the next frame automatically
+      if autoT==1 || strcmp(seltype,'alt')==true
+        quickRedraw(uda,h,sp,fr);
+      end
     end % end of click selection type processing for normal & alt clicks
     
     % process auto-tracker options that depend on click
-    autoT=get(h(35),'Value'); % 1=off, 2=advance, 3=semi, 4=auto
     if strcmp(seltype,'normal')==true && autoT>1
       if autoT==2 && fr<get(h(5),'Max'); % auto-advance
         set(h(5),'Value',fr+1); % current frame + 1
@@ -1502,9 +1515,12 @@ switch call
         overwrite='Yes';
       end
       
+      % get number of points
+      numPts=size(uda.dltpts,2)/3;
+      
       % create headers (dltpts)
       dlth=cell(size(uda.dltpts,2),1);
-      for i=1:size(uda.dltpts,3)
+      for i=1:numPts
         dlth{i*3-2}=sprintf('pt%s_X',num2str(i));
         dlth{i*3-1}=sprintf('pt%s_Y',num2str(i));
         dlth{i*3-0}=sprintf('pt%s_Z',num2str(i));
@@ -1517,7 +1533,6 @@ switch call
       end
       
       % create headers (xypts)
-      numPts=size(uda.dltpts,2)/3;
       xyh=cell(uda.nvid*numPts*2,1);
       for i=1:numPts
         for j=1:uda.nvid
@@ -2880,8 +2895,15 @@ function quickRedraw(uda,h,sp,fr)
 % fix uda.sp
 uda.sp=sp;
 
+% get list of videos to update
+if get(uda.handles(63),'value') % all
+  vidlist=1:uda.nvid;
+else
+  vidlist=uda.lastvnum; % current
+end
+
 % loop through each axes and update it
-for i=1:uda.nvid
+for i=vidlist %1:uda.nvid % using vidlist only updates the active video(s)
   
   % get current x limits
   xl=xlim(h(i+300));
@@ -4643,7 +4665,9 @@ function [pseq] = getTSseq(h,fr,len)
 ww=str2double(get(h(602),'string'));
 if fr<ww/2+1
   ls=round(max([1 fr-ww/2]));
-  rs=round(min([len, ls+ww/2.1]));
+  %rs=round(min([len, ls+ww/2.1]));
+  %rs=round(min([len, ls+ww])); % preserve size of time-series window
+  rs=round(min([len,ww+1]));
 else
   rs=round(min([len, fr+ww/2]));
   ls=round(max([1 rs-ww]));
