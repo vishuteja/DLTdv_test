@@ -39,6 +39,10 @@ function [] = DLTdv6(varargin)
 % 2016-09-25 - fix bug with frame count display running out of space and
 % some changes to time series window display sequence calculation.
 % 2016-11-09 - fixes from Dmitri Skandalis
+% 2017-03-23 - go back to restricting the 2D point range of the active bird
+% to that specified in the time series window
+% 2017-05-11 - try and detect bad video files, bugfix for point swap from
+% Dimitri Skandalis
 
 %% Function initialization
 if nargin==0 % no inputs, just fix the path and run the gui
@@ -146,7 +150,7 @@ switch call
   case {99} % Initialize the GUI
     
     fprintf('\n')
-    disp('DLTdv6 (updated August 18, 2016)')
+    disp('DLTdv6 (updated May 11, 2017)')
     fprintf('\n')
     disp('Visit http://www.unc.edu/~thedrick/ for more information,')
     disp('tutorials, sample data & updates to this program.')
@@ -586,14 +590,23 @@ switch call
     end
     %cdataCache=cell(uda.nvid,1); % initialize cdataCache - stored video frames
     
-    % plot the first images in each axis
+    % plot the first images in each axis & check each video
     for i=1:uda.nvid
       
       % make the axis of interest active and visible
       set(h(i+300),'Visible','on');
       
-      % read the video frame; assume it is grayscale
+      % check for bad timing
       movname=getappdata(h(i+300),'fname');
+      movieInfo=mediaInfo(movname);
+      if movieInfo.variableTiming
+        beep
+        disp(['WARNING - Movie ',movname,' appears to have variable frame timing and may not read properly in MATLAB.'])
+        disp(['Please re-save or re-encode this movie in a format with fixed frame timing such as AVI'])
+        disp('-')
+      end
+      
+      % read the video frame; assume it is grayscale
       [mov,fname]=mediaRead(movname,1,false,false); % grab the 1st frame
       setappdata(h(i+300),'fname',fname); % set the name (or mmreader obj)
       
@@ -1256,7 +1269,7 @@ switch call
         minsp = min([sp,selection]);
         maxsp = max([sp,selection]);
         uda.xypts(:,(1:2*uda.nvid)+(minsp-1)*2*uda.nvid)=xytmp(:,(1:2*uda.nvid)+(maxsp-1)*2*uda.nvid);
-        uda.xypts(:,(1:2*uda.nvid)+(minsp-1)*2*uda.nvid)=xytmp(:,(1:2*uda.nvid)+(maxsp-1)*2*uda.nvid);
+        uda.xypts(:,(1:2*uda.nvid)+(maxsp-1)*2*uda.nvid)=xytmp(:,(1:2*uda.nvid)+(minsp-1)*2*uda.nvid);
         
         uda.dltpts(:,minsp*3-2:minsp*3)=dltpttmp(:,maxsp*3-2:maxsp*3);
         uda.dltpts(:,maxsp*3-2:maxsp*3)=dltpttmp(:,minsp*3-2:minsp*3);
@@ -1284,7 +1297,7 @@ switch call
       if isempty(rng)==false
         try
           numrng(1)=str2num(rng{1});
-          numrng(2)=str2num(rng{2});
+          numrng(2)=min([size(uda.xypts,1),str2num(rng{2})]);
         catch
           beep
           disp('Point splitting input error')
@@ -1612,7 +1625,7 @@ switch call
         % data
         for i=1:size(uda.offset,1);
           tempData=squeeze(sp2full(uda.offset(i,:)));
-          tempData(isnan(tempData))==0;
+          tempData(isnan(tempData))=0;
           for j=1:numel(tempData)-1
             fprintf(f1,'%.6f,',tempData(j));
           end
@@ -1791,7 +1804,7 @@ switch call
       end
     end
     msgbox(['WARNING - check the offset values, they may not be correct'...
-      ,'for partially digitizied files.'], ...
+      ,' for partially digitizied files.'], ...
       'Warning','warn','modal')
     
     % update the number of points settings
@@ -1802,6 +1815,10 @@ switch call
     end
     ptstring(1,numpts*4-3:numpts*4-1)=sprintf('%3d',numpts);
     set(h(32),'String',ptstring);
+    
+    % set selected point back to 1
+    uda.sp=1;
+    set(h(32),'Value',1);
     
     % call self to update the video fields
     %DLTdv6(1,uda);
@@ -3088,9 +3105,12 @@ for i=vidlist %1:uda.nvid % using vidlist only updates the active video(s)
       %pause(1)
     end
     
-    % plot track of current bird
-    plot(h(i+300),sp2full(uda.xypts(:,(i)*2-1+(sp-1)*2*uda.nvid)),...
-      sp2full(uda.xypts(:,i*2+(sp-1)*2*uda.nvid)),'m-o','markersize',4,...
+    % plot track of current bird (modified on 2017-03-23)
+%     plot(h(i+300),sp2full(uda.xypts(:,(i)*2-1+(sp-1)*2*uda.nvid)),...
+%       sp2full(uda.xypts(:,i*2+(sp-1)*2*uda.nvid)),'m-o','markersize',4,...
+%       'HitTest','off')
+    plot(h(i+300),sp2full(uda.xypts(pseq,(i)*2-1+(sp-1)*2*uda.nvid)),...
+      sp2full(uda.xypts(pseq,i*2+(sp-1)*2*uda.nvid)),'m-o','markersize',4,...
       'HitTest','off')
     
     % XYZ
@@ -3303,7 +3323,7 @@ nCams=size(coefs,2);
 nPts=size(camPts,2)./(2*size(coefs,2));
 
 % number of bootstrap iterations
-bsIter=250;
+bsIter=250; % 250 in normal production
 
 % create a progress bar
 h=waitbar(0,'Creating 95% confidence intervals...');
@@ -3750,6 +3770,22 @@ else
 end
 info.compression = obj.VideoCompression;
 
+% check for variable frame timing
+if info.NumFrames>4 & ismethod(obj,'readFrame')
+  for i=1:5
+    fTimes(i,1)=obj.CurrentTime;
+    foo=obj.readFrame;
+  end
+  fSpan=round(diff(fTimes)*100000)/100000; % round to remove numeric precision noise
+  if numel(unique(fSpan))>1
+    info.variableTiming=true;
+  else
+    info.variableTiming=false;
+  end
+else
+  info.variableTiming=false;
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% cineRead
@@ -3883,6 +3919,9 @@ if strcmpi(fileName(end-3:end),'.cin') || ...
   info.softwareVersion=header32(222);
   info.headerPad=header32(9); % variable length pre-data pad
   info.compression=sprintf('%s-bit raw',num2str(info.bitDepth));
+  
+  % variable timing not possible in mrf files
+  info.variableTiming=false;
 else
   fprintf('%s does not appear to be a cine file.',fileName)
   info=[];
@@ -3937,6 +3976,9 @@ if strcmpi(fileName(end-3:end),'.mrf')
   
   % release the file handle
   fclose(f1);
+  
+  % variable timing not possible in mrf files
+  info.variableTiming=false;
   
 else
   fprintf('%s does not appear to be an mrf file.',fileName)
