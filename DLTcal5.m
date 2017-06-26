@@ -409,8 +409,8 @@ switch call
     
     % turn on Centroid finding & set value to "On" if the image analysis
     % toolbox functions that it depends on are available
-    if exist('im2bw','file')==2 && exist('regionprops','file')==2 ...
-        && exist('bwlabel','file')==2
+    if exist('im2bw','file')>1 && exist('regionprops','file')>1 ...
+        && exist('bwlabel','file')>1
       set(h(55),'enable','on','Value',0);
       disp('Detected Image Analysis toolbox, centroid localization is')
       disp('available, enable it via the checkbox in the Controls window.')
